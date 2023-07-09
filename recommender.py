@@ -1,3 +1,5 @@
+import json
+
 #should allow input of shop link
 #builds a recommended group of ball pythons for purchase based on:
   # age/maturity
@@ -14,10 +16,15 @@ snakes = []
 
 #pulls data from web, converts to desired format using Python class, writes data to the shop_data file
 def download_snakes():
-  pass
-    #asks user input for link
-    #checks if can connect to link, returns error if not
-    # convert to read and write to shop_data file, each snake on it's own line
+  #asks user input for link
+  #checks if can connect to link, returns error if not
+
+  #convert to read and write to shop_data file, each snake on it's own line
+  with open('animals.json') as raw_data:
+    shop_data = json.load(raw_data) #type is list, indicies are dictionaries
+    # print(shop_data)
+    print(type(shop_data[0]))
+    
 
 #takes the snake data and uses Python class to create instances for each one in the shop, then adds to snakes list
 def format_snakes(file):
@@ -60,3 +67,4 @@ def bag_of_snakes(snakes, order):
       # -goes through the price and gene stack to find best package deal
 
 
+download_snakes()
