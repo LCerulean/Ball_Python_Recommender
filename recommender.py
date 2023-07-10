@@ -46,27 +46,23 @@ def format_shop_stock():
               count += 1
 
             snake_info["Traits"] = traits_list
-
-
-
           else:
           #copying relevant info from json file for each snake and putting it in list
             snake_info[key] = snake_data[key]
         
-        
         snakes.append(snake_info)
-      
-  for snake in snakes:
-    print(f"{snake['Traits']}\n")
+  return snakes
     
 
-#takes the snake data and uses Python class to create instances for each one in the shop, then adds to snakes list
-def format_snakes(file):
-  pass
-    #open file in read
-    #loop through each line, making Python instance for each
-      #add in all the data for the snake
-      #add the Python to the snakes list
+def get_in_stock_traits():
+  in_stock = []
+  for snake in snakes:
+    for trait in snake["Traits"]:
+      if trait != "het" and trait != "50%" and trait != "66%":
+        if trait not in in_stock:
+          in_stock.append(trait)
+  return in_stock
+
 
 #graphics display, welcome, list of things it can do
 def welcome_message():
@@ -102,3 +98,4 @@ def bag_of_snakes(snakes, order):
 
 
 format_shop_stock()
+print(get_in_stock_traits())
