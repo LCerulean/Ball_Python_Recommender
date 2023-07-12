@@ -14,8 +14,8 @@ import json
 
 snakes = []
 
-#pulls data from web, converts to desired format using Python class, writes data to the shop_data file
-def format_shop_stock():
+#pulls relevant data from json file, converts to desired format in 'snakes' list (each index is a dictionary of individual snake)
+def get_shop_stock():
   #convert to read and write to shop_data file, each snake on it's own line
   with open('animals.json') as raw_data:
     shop_data = json.load(raw_data) #type is list, indicies are dictionaries
@@ -32,20 +32,52 @@ def format_shop_stock():
             trait_count = len(traits_split)
             count = 0
             while count < trait_count:
-              #checking if trait is two words, if so joining into single string before appending list
-              ## NOT joining hets or percents with traits, leaving seperate for search
-              if traits_split[count] == "black" or traits_split[count] == "yellow" or traits_split[count] == "lavender" or traits_split[count] == "pet":
+              #joining percents with hets  and their corrisponding trait in single string
+              if traits_split[count] == "50%" or traits_split[count] == "66%":
+                trait = traits_split[count] + " " + traits_split[count+1] + " " + traits_split[count+2]
+                #skipping "albino" in the case of finding lavender, lavender is assumed albino
+                if traits_split[count+2] == "lavender":
+                  count +=1
+                count += 2
+                traits_list.append(trait)
+                if count >= len(traits_split):
+                  break
+
+              #joinging 100% hets with corrisponding trait in single string  
+              elif traits_split[count] == "het":
+                trait = traits_split[count] + " " + traits_split[count+1]
+                #skipping "albino" in the case of finding lavender, lavender is assumed albino
+                if traits_split[count+1] == "lavender":
+                  count +=1
+                count += 1
+                traits_list.append(trait)
+                if count >= len(traits_split):
+                  break
+                
+              #checking if visible trait is two words, if so joining into single string before appending list  
+              elif traits_split[count] == "black" or traits_split[count] == "yellow" or traits_split[count] == "pet":
                 trait = traits_split[count] + " " + traits_split[count+1]
                 traits_list.append(trait)
                 #skipping 2nd half of two word trait in next loop through traits_split
                 count += 1
                 if count >= len(traits_split):
                   break
+              
+              #skipping "albino" in the case of finding lavender, lavender is assumed albino
+              elif traits_split[count] == "lavender":
+                traits_list.append(traits_split[count])
+                count += 1
+                if count >= len(traits_split):
+                  break
+
+              
+              #adding all single word visible traits to list  
               else:
                 traits_list.append(traits_split[count])
               count += 1
 
             snake_info["Traits"] = traits_list
+
           else:
           #copying relevant info from json file for each snake and putting it in list
             snake_info[key] = snake_data[key]
@@ -54,14 +86,15 @@ def format_shop_stock():
   return snakes
     
 
-def get_in_stock_traits():
+def print_in_stock_traits():
   in_stock = []
   for snake in snakes:
     for trait in snake["Traits"]:
-      if trait != "het" and trait != "50%" and trait != "66%":
-        if trait not in in_stock:
-          in_stock.append(trait)
-  return in_stock
+      if trait not in in_stock:
+        in_stock.append(trait)
+  in_stock.sort()
+  for stock in in_stock:
+    print(stock)
 
 
 #graphics display, welcome, list of things it can do
@@ -97,5 +130,7 @@ def bag_of_snakes(snakes, order):
       # -goes through the price and gene stack to find best package deal
 
 
-format_shop_stock()
-print(get_in_stock_traits())
+get_shop_stock()
+# for snake in snakes:
+#   print(snake)
+print_in_stock_traits()
