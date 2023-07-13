@@ -13,6 +13,7 @@ import json
 
 
 snakes = []
+trait_stock = []
 
 #pulls relevant data from json file, converts to desired format in 'snakes' list (each index is a dictionary of individual snake)
 def get_shop_stock():
@@ -86,16 +87,57 @@ def get_shop_stock():
   return snakes
     
 
-def print_in_stock_traits():
-  in_stock = []
+#compiles a list of in stock traits the user can select from if looking for specific traits
+def in_stock_traits():
   for snake in snakes:
     for trait in snake["Traits"]:
-      if trait not in in_stock:
-        in_stock.append(trait)
-  in_stock.sort()
-  for stock in in_stock:
-    print(stock)
+      if trait not in trait_stock:
+        trait_stock.append(trait)
+  trait_stock.sort()
+  return trait_stock
 
+#categorizes and prints in stock traits for user
+def categorized_in_stock_traits():
+  all_traits = trait_stock
+  recessive_traits = []
+  codominant_traits = []
+  
+  #seperates recessive and codominant traits and puts recessive traits in a better order for display
+  for trait in all_traits:
+    if trait == "lavender" or trait == "piebald" or trait == "clown":
+      recessive_traits.append(trait)
+      all_traits.remove(trait)
+  for trait in all_traits:
+    if trait[:3] == "het":
+      recessive_traits.append(trait)
+      all_traits.remove(trait)
+  for trait in all_traits:
+    if trait[2] == '%':
+      recessive_traits.append(trait)
+      all_traits.remove(trait)
+  for trait in all_traits:
+    codominant_traits.append(trait)
+    
+  list_len_diff = max(len(recessive_traits), len(codominant_traits)) - min(len(recessive_traits), len(codominant_traits))
+  if len(recessive_traits) < len(codominant_traits):
+    for num in range(list_len_diff):
+      recessive_traits.append("")
+  elif len(recessive_traits) > len(codominant_traits):
+    for num in range(list_len_diff):
+      codominant_traits.append("")
+  else:
+    pass
+      
+    
+  #formats and prints the categorized traits
+  formatted_traits = "RECESSIVE TRAITS     CODOMINANT TRAITS\n"
+  list_len_max = max(len(recessive_traits), len(codominant_traits))
+  idx = 0
+  for num in range(list_len_max):
+    formatted_traits += recessive_traits[idx] + "     " + codominant_traits[idx] + "\n"
+    idx += 1
+  print(formatted_traits)
+  
 
 #graphics display, welcome, list of things it can do
 def welcome_message():
@@ -133,4 +175,5 @@ def bag_of_snakes(snakes, order):
 get_shop_stock()
 # for snake in snakes:
 #   print(snake)
-print_in_stock_traits()
+print(in_stock_traits())
+categorized_in_stock_traits()
