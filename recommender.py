@@ -98,26 +98,48 @@ def in_stock_traits():
 
 #categorizes and prints in stock traits for user
 def categorized_in_stock_traits():
-  all_traits = trait_stock
+  formatted_traits = []
   recessive_traits = []
   codominant_traits = []
-  
+
+  #standardizing trait string length for printing
+  len_trait_block = 0
+  for trait in trait_stock:
+    if len(trait) > len_trait_block:
+      len_trait_block = len(trait)
+  for trait in trait_stock:
+    add_len = len_trait_block - len(trait)
+    if add_len > 0:
+      trait += (" " * add_len)
+      formatted_traits.append(trait)
+    else:
+      formatted_traits.append(trait)
+
   #seperates recessive and codominant traits and puts recessive traits in a better order for display
-  for trait in all_traits:
-    if trait == "lavender" or trait == "piebald" or trait == "clown":
+  for trait in formatted_traits:
+    if trait.find("lavender") >= 0 or trait.find("piebald") >= 0 or trait.find("clown") >= 0:
       recessive_traits.append(trait)
-      all_traits.remove(trait)
-  for trait in all_traits:
-    if trait[:3] == "het":
-      recessive_traits.append(trait)
-      all_traits.remove(trait)
-  for trait in all_traits:
-    if trait[2] == '%':
-      recessive_traits.append(trait)
-      all_traits.remove(trait)
-  for trait in all_traits:
-    codominant_traits.append(trait)
-    
+    else:
+      codominant_traits.append(trait)
+  #rearranging recessive_traits so it doesn't look like crap
+  reordering_recessives = []
+  for trait in recessive_traits:
+    if trait.find("het") == -1:
+      reordering_recessives.append(trait)
+  for trait in recessive_traits:
+    if trait.find("het") >= 0 and trait.find("%") == -1:
+      reordering_recessives.append(trait)
+  for trait in recessive_traits:
+    if trait[0] == "6":
+      reordering_recessives.append(trait)
+  for trait in recessive_traits:
+    if trait not in reordering_recessives:
+      reordering_recessives.append(trait)
+  recessive_traits = reordering_recessives
+
+  
+  
+
   list_len_diff = max(len(recessive_traits), len(codominant_traits)) - min(len(recessive_traits), len(codominant_traits))
   if len(recessive_traits) < len(codominant_traits):
     for num in range(list_len_diff):
@@ -130,13 +152,13 @@ def categorized_in_stock_traits():
       
     
   #formats and prints the categorized traits
-  formatted_traits = "RECESSIVE TRAITS     CODOMINANT TRAITS\n"
+  trait_col_header = "RECESSIVE TRAITS     CODOMINANT TRAITS\n"
   list_len_max = max(len(recessive_traits), len(codominant_traits))
   idx = 0
   for num in range(list_len_max):
-    formatted_traits += recessive_traits[idx] + "     " + codominant_traits[idx] + "\n"
+    trait_col_header += recessive_traits[idx] + "     " + codominant_traits[idx] + "\n"
     idx += 1
-  print(formatted_traits)
+  print(trait_col_header)
   
 
 #graphics display, welcome, list of things it can do
