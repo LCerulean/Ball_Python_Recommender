@@ -96,6 +96,7 @@ def in_stock_traits():
   trait_stock.sort()
   return trait_stock
 
+
 #categorizes and prints in stock traits for user
 def categorized_in_stock_traits():
   formatted_traits = []
@@ -136,21 +137,18 @@ def categorized_in_stock_traits():
     if trait not in reordering_recessives:
       reordering_recessives.append(trait)
   recessive_traits = reordering_recessives
-
   
-  
-
+  #adds blanks to shorter list to make both even to simplify printing even columns
   list_len_diff = max(len(recessive_traits), len(codominant_traits)) - min(len(recessive_traits), len(codominant_traits))
   if len(recessive_traits) < len(codominant_traits):
     for num in range(list_len_diff):
-      recessive_traits.append("")
+      recessive_traits.append(" " * len_trait_block)
   elif len(recessive_traits) > len(codominant_traits):
     for num in range(list_len_diff):
-      codominant_traits.append("")
+      codominant_traits.append(" " * len_trait_block)
   else:
     pass
-      
-    
+       
   #formats and prints the categorized traits
   trait_col_header = "RECESSIVE TRAITS     CODOMINANT TRAITS\n"
   list_len_max = max(len(recessive_traits), len(codominant_traits))
@@ -163,20 +161,143 @@ def categorized_in_stock_traits():
 
 #graphics display, welcome, list of things it can do
 def welcome_message():
-  pass
-    #Opening message
+  welcome = """
+*********************************************************************
+************  Welcome to the Ball Python Recommender!  **************
+*********************************************************************
+The purpose of this program is to aid you in picking the best snake(s)
+for your budget and project from the Crescent Serpents shop.
+
+Options you can pick from include:
+-Number of snakes in package: specific number or range (min and max)
+-Sex: males, females, or both (and the ratio of males/females if both)
+-Traits to include/exclude: in package or in each animal
+-Trait count minimum: in package or in each animal
+  """
+  print(welcome)
+  see_traits = input("Would you like to see a list of traits currently in stock? (Y/N) ")
+  print()
+  if see_traits.upper() == "Y":
+    categorized_in_stock_traits()
 
 #gets the parameters from user
 def take_order():
-  pass
+
+  budget_range = None
+  num_snakes = None
+
+  sex = None
+  num_males = None
+  sex_ratio = None
+
+  all_traits = []
+  pack_traits = []
+  ex_traits = []
+
+  #getting budget
+  while budget_range == None:
+    budget = input("Let's get started!\nWhat is your budget? Write it as a range, such as '150-200'\n(recommended minimum range of $50) ")
+    try:
+      budget_range = range(int(budget.split("-")[0]),int(budget.split("-")[-1]))
+    except:
+      print("Sorry, I didn't understand that. Make sure you're not using extra symbols or spaces.")
+  print(f"\nGot it, budget {budget_range}\n")
+  
+  #getting number of snakes
+  while num_snakes == None:
+    num_snakes_type = input("Are you looking for a specific number of snakes, or a range? (specific/range) ")
+    if num_snakes_type.lower() == "specific":
+      try:
+        num_snakes = int(input("Okay, what is the specific number you are looking for? "))
+      except:
+        print("Sorry, I didn't understand that. Make sure you're giving a number.")
+    elif num_snakes_type.lower() == "range":
+      num_snakes = input("Okay, what is the min and max number of snakes you are looking for? (Example: '2-3') ")
+      try:
+        num_snakes = range(int(num_snakes.split("-")[0]),int(num_snakes.split("-")[-1]))
+      except:
+        print("Sorry, I didn't understand that. Make sure you're not using extra symbols or spaces.")
+    else:
+      print("Sorry, I didn't understand that.")
+  print(f"\nGot it, you are looking for {num_snakes} snakes.\n")
+
+  #getting sex/ratio of snakes
+  while sex == None and num_males == None and sex_ratio == None:
+    sex_type = input("Are you looking for males, females, or both? ")
+    if sex_type.lower() == "females" or sex_type.lower() == "males":
+      sex = sex_type.lower()
+    elif sex_type.lower() == "both":
+      if type(num_snakes) == int:
+        try:
+          num_males = int(input(f"Okay, out of {num_snakes} snakes, how many do you want to be males? "))
+          print(f"\nGot it, {num_males} males and {num_snakes - num_males} females.\n")
+        except:
+          print("Sorry, I didn't understand that. Make sure you're giving a number.")
+      else:
+        sex_count = input("Okay, what ratio of males/females are you looking for? (Example: '2/3') ")
+        try:
+          sex_ratio = range(int(sex_count.split("/")[0]),int(sex_count.split("/")[-1]))
+          print(f"\nGot it, {sex_count.split('/')[0]} males to {sex_count.split('/')[-1]} females.\nIf we can't hit that ratio exactly then we will try to get it as close as possible.\n")
+        except:
+          print("Sorry, I didn't understand that. Make sure you're not using extra symbols or spaces.")
+    else:
+      print("Sorry, that's not an option. Please type 'males' 'females' or 'both'.")
+
+  #getting traits to include
+  while len(all_traits) == 0 and len(pack_traits) == 0:
+    include_traits_all = input("Let's start picking traits. Are there any traits that you want EVERY snake to have? (Y/N) ")
+    if include_traits_all.upper() == "Y":
+      more_traits = "Y"
+      while more_traits.upper() == "Y":
+        include_traits_all = input("Okay, what trait(s) do you want ALL the snakes to have? (Example: 'lavender/yellow belly/clown') ")
+        for trait in include_traits_all.split("/"):
+          if trait in trait_stock and trait not in all_traits:
+            all_traits.append(trait)
+          else:
+            print(f"Sorry, {trait} is not in stock.")
+        more_traits = input("Were there any other traits you want ALL the snakes to have? (Y/N) ")
+    
+    include_traits_pack = input("Okay, were there any traits you want included in the package but not each snake needs to have? (Y/N) ")
+    if include_traits_pack.upper() == "Y":
+      more_traits = "Y"
+      while more_traits.upper() == "Y":
+        include_traits_pack = input("Okay, what trait(s) do you want included in the package? (Example: pastel/black head/clown/lavender) ")
+        for trait in include_traits_pack.split("/"):
+          if trait in trait_stock and trait not in pack_traits:
+            pack_traits.append(trait)
+          else:
+            print(f"Sorry, {trait} is not in stock.")
+        more_traits= input("Were there any other traits you want included in the package? (Y/N) ")
+    else:
+      break
+  print("\nGot it!")
+  also = " "
+  if len(all_traits) > 0:
+    print(f"All the snakes in the package must have each of these traits: {all_traits}")
+    also = " also "
+  if len(pack_traits) > 0:
+    print(f"The package should{also}include these traits: {pack_traits}\n")
+
+  #getting traits to exclude
+  while len(ex_traits) == 0:
+    exclude = input("Are there any traits you do NOT want included in the package? (Y/N) ")
+    if exclude.upper() == "Y":
+      more_traits = "Y"
+      while more_traits.upper() == "Y":
+        exclude = input("What traits do you want to exclude? (Example: fire/black pastel/pet only)")
+        for trait in exclude.split("/"):
+          if trait in trait_stock and trait not in pack_traits:
+            ex_traits.append(trait)
+          else:
+            print(f"{trait} is not in stock, so no need to worry about that one!")
+        more_traits= input("Were there any other traits you want included in the package? (Y/N) ")
+      print(f"\nGot it, no snake in the package will have any of these traits: {ex_traits}\n")
+    else:
+      break
+  
+
+
     #input on:
-    # -budget range (min range of 50)
-    # -number of snakes: specific number or max
-    # -males/females/both
-    #   -if both, what ratio
-    # -specific genes to include (if any)
-    #   -if yes, should any of these genes be present in ALL animals
-    # -specific genes to exclude (if any)
     # -specific gene count (written as "=< x" or "=> x") if any
     # -priority: most for money, greatest gene diversity
     
@@ -195,7 +316,6 @@ def bag_of_snakes(snakes, order):
 
 
 get_shop_stock()
-# for snake in snakes:
-#   print(snake)
-print(in_stock_traits())
-categorized_in_stock_traits()
+in_stock_traits()
+welcome_message()
+take_order()
