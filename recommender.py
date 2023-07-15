@@ -193,6 +193,7 @@ def take_order():
   all_traits = []
   pack_traits = []
   ex_traits = []
+  trait_count = None
 
   #getting budget
   while budget_range == None:
@@ -226,6 +227,7 @@ def take_order():
     sex_type = input("Are you looking for males, females, or both? ")
     if sex_type.lower() == "females" or sex_type.lower() == "males":
       sex = sex_type.lower()
+      print(f"\nGot it, package will be made up of only {sex}.\n")
     elif sex_type.lower() == "both":
       if type(num_snakes) == int:
         try:
@@ -256,7 +258,11 @@ def take_order():
           else:
             print(f"Sorry, {trait} is not in stock.")
         more_traits = input("Were there any other traits you want ALL the snakes to have? (Y/N) ")
-    
+      print(f"\nGot it, all the snakes in the package must have each of these traits: {all_traits}\n")
+    else:
+      all_traits.append(None)
+      print("\nGot it, no specific traits that each snake needs to have.\n")
+      
     include_traits_pack = input("Okay, were there any traits you want included in the package but not each snake needs to have? (Y/N) ")
     if include_traits_pack.upper() == "Y":
       more_traits = "Y"
@@ -268,15 +274,10 @@ def take_order():
           else:
             print(f"Sorry, {trait} is not in stock.")
         more_traits= input("Were there any other traits you want included in the package? (Y/N) ")
+      print(f"\nGot it, the package should include these traits: {pack_traits}\n")
     else:
-      break
-  print("\nGot it!")
-  also = " "
-  if len(all_traits) > 0:
-    print(f"All the snakes in the package must have each of these traits: {all_traits}")
-    also = " also "
-  if len(pack_traits) > 0:
-    print(f"The package should{also}include these traits: {pack_traits}\n")
+      pack_traits.append(None)
+      print("\nGot it, no specific traits to include in the package.\n")
 
   #getting traits to exclude
   while len(ex_traits) == 0:
@@ -284,22 +285,47 @@ def take_order():
     if exclude.upper() == "Y":
       more_traits = "Y"
       while more_traits.upper() == "Y":
-        exclude = input("What traits do you want to exclude? (Example: fire/black pastel/pet only)")
+        exclude = input("What traits do you want to exclude? (Example: fire/black pastel/pet only) ")
         for trait in exclude.split("/"):
           if trait in trait_stock and trait not in pack_traits:
             ex_traits.append(trait)
           else:
             print(f"{trait} is not in stock, so no need to worry about that one!")
-        more_traits= input("Were there any other traits you want included in the package? (Y/N) ")
+        more_traits= input("Were there any other traits you want exclude in the package? (Y/N) ")
       print(f"\nGot it, no snake in the package will have any of these traits: {ex_traits}\n")
     else:
-      break
-  
+      ex_traits.append(None)
+      print("\nGot it, no excluded traits in the package.\n")
+    
+    #getting number of traits per snake
+    trait_min = None
+    trait_max = None
+    while trait_count == None:
+      trait_count_yes = input("Would you like to specify the number of traits in each snake? (Y/N) ")
+      if trait_count_yes.upper() == "Y":
+        while trait_min is None:
+          try:
+            trait_min = int(input("What is the minimum number of traits you would like to have? "))
+          except:
+            print("Sorry, your answer needs to be a number")
+        trait_max_yes = input("Would you like to specify a maximum number of traits in each snake? (Y/N) ")
+        if trait_max_yes.upper() == "Y":
+          while trait_max is None:
+            try:
+              trait_max = int(input("What is the maximum number of traits you would like to have? "))
+            except:
+              print("Sorry, your answer needs to be a number")
+        if trait_max != None:
+          trait_count = range(trait_min, trait_max)
+        else:
+          trait_count = trait_min
+        if trait_max == None:
+          print(f"Got it, only snakes with at least {trait_count} traits will be included.")
+        else:
+          print(f"Got it, only snakes with {trait_count} traits will be included.")
+      else:
+        break
 
-
-    #input on:
-    # -specific gene count (written as "=< x" or "=> x") if any
-    # -priority: most for money, greatest gene diversity
     
     #return this in a dictionary?
        
