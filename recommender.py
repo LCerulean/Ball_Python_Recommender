@@ -2,19 +2,20 @@ import json
 
 #should allow input of shop link
 #builds a recommended group of ball pythons for purchase based on:
-  # age/maturity
-  # genes wanted (option for either all animals have said gene, or just want gene somewhere in the package)
-  # genes NOT wanted
-  # gene count
-  # snake count
-  # sex -can be split male/female with specific amounts or ratios, or just all
-  # individual price or budget
+
   # take into account shipping price and store discounts
 
 
 snakes = []
 trait_stock = []
-package_order = {"budget":None, "num_snakes":None, "females":None, "males":None, "sex_ratio":None, "all_snakes_traits":None, "one_of_traits":None, "pack_traits":None, "ex_traits":None, "trait_count":None}
+discounts = {2:10, 3:15, 4:20}
+for i in range(5-10):
+  discounts[i] = 25
+for i in range(10-100):
+  discounts[i] = 30
+
+package_order = {"budget":None, "num_snakes":None, "discount":None, "females":None, "males":None, "sex_ratio":None, "all_snakes_traits":None, "one_of_traits":None, "pack_traits":None, "ex_traits":None, "trait_count":None}
+
 
 #pulls relevant data from json file, converts to desired format in 'snakes' list (each index is a dictionary of individual snake)
 def get_shop_stock():
@@ -180,9 +181,10 @@ Options you can pick from include:
   print()
   if see_traits.upper() == "Y":
     categorized_in_stock_traits()
+  print("\nLet's get started!")
 
 
-#gets the parameters from user and puts them in the package order dictionary
+#gets the parameters from user and puts them in the package_order dictionary
 def take_order():
   
   budget_max = None
@@ -200,7 +202,7 @@ def take_order():
 
   #getting budget
   while budget_max == None:
-    budget = input("Let's get started!\nWhat is your maximum budget? (Minimum of $50) ")
+    budget = input("\nWhat is your maximum budget? (Minimum of $50) ")
     try:
       budget = int(budget)
       if (budget) >= 50:
@@ -210,7 +212,7 @@ def take_order():
     except:
       print("Sorry, I didn't understand that. Make sure you're not using extra symbols or spaces.")
   package_order["budget"] = budget_max
-  print(f"\nGot it, budget {budget}\n")
+  print(f"\nGot it, budget ${budget}\n")
   
   #getting number of snakes
   while num_snakes == None:
@@ -218,6 +220,7 @@ def take_order():
     if num_snakes_type.lower() == "specific":
       try:
         num_snakes = int(input("Okay, what is the specific number you are looking for? "))
+        package_order["discount"] = discounts[num_snakes]
         print(f"\nGot it, you are looking for {num_snakes} snakes.\n")
       except:
         print("Sorry, I didn't understand that. Make sure you're giving a number.")
@@ -225,6 +228,7 @@ def take_order():
       num_snakes = input("Okay, what is the min and max number of snakes you are looking for? (Example: '2-3') ")
       try:
         min_snakes_package = int(num_snakes.split("-")[0])
+        package_order["discount"] = discounts[min_snakes_package]
         max_snakes_package = int(num_snakes.split("-")[-1]) + 1
         num_snakes = range(min_snakes_package,max_snakes_package)
         print(f"\nGot it, you are looking for {min_snakes_package}-{max_snakes_package - 1} snakes.\n")
@@ -367,7 +371,7 @@ def take_order():
     #return this in a dictionary?
        
 
-#cuts out any snakes that do not fit individual criteria for package    
+#cuts out any snakes that do not fit individual criteria for package, prints remaining snake count after each cut
 def cut_snakes():
   #removing any snakes that do not fit the required sex (if any)
   cut1 = []
@@ -382,7 +386,7 @@ def cut_snakes():
           cut1.append(snake)
   else:
     cut1 = snakes[:]
-  print(f"First cut, removing undesired sex (if any). {len(cut1)} snakes in bag.\n")
+  print(f"\nFirst cut, removing undesired sex (if any). {len(cut1)} snakes in bag.\n")
   
   #removing any snakes that do not have mandetory traits
   cut2 = []
@@ -464,7 +468,7 @@ def cut_snakes():
   final_cut = []
   budget_cap = package_order["budget"]
   for snake in cut5:
-    if snake["Price"] <= budget_cap:
+    if int(snake["Price"]-(snake["Price"] / package_order["discount"])) <= budget_cap:
       final_cut.append(snake)
   if len(cut5) == 0:
     print(f"Sorry, there aren't any available snakes left that are under the budget maximum: ${budget_cap}\n")
@@ -515,9 +519,22 @@ def cut_snakes():
     return final_cut
   else:
     print()
-    return False
+    return None
 
 
+
+get_shop_stock()
+in_stock_traits()
+welcome_message()
+
+possible_package = None
+while possible_package == None:
+  take_order()
+  possible_package = cut_snakes()
+  if possible_package == None:
+    #reset package_order so no traits left in lists from previous attempt
+    package_order = {"budget":None, "num_snakes":None, "females":None, "males":None, "sex_ratio":None, "all_snakes_traits":None, "one_of_traits":None, "pack_traits":None, "ex_traits":None, "trait_count":None}
+    print("Let's try again. Are there any requirements you could lower or do without?\n")
 
 #multiple functions needed:
   # -each Python is a node?
@@ -526,9 +543,3 @@ def cut_snakes():
   #   -stack for gene count (order most to least)
   # -goes through the price and gene stack to find best package deal
 
-
-get_shop_stock()
-in_stock_traits()
-welcome_message()
-take_order()
-meets_requirements = cut_snakes()
