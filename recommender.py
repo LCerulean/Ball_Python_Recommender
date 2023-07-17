@@ -14,6 +14,7 @@ import json
 
 snakes = []
 trait_stock = []
+package_order = {"budget":None, "num_snakes":None, "females":None, "males":None, "sex_ratio":None, "all_snakes_traits":None, "one_of_traits":None, "pack_traits":None, "ex_traits":None, "trait_count":None}
 
 #pulls relevant data from json file, converts to desired format in 'snakes' list (each index is a dictionary of individual snake)
 def get_shop_stock():
@@ -180,9 +181,9 @@ Options you can pick from include:
   if see_traits.upper() == "Y":
     categorized_in_stock_traits()
 
-#gets the parameters from user
+#gets the parameters from user and puts them in the package order dictionary
 def take_order():
-
+  
   budget_range = None
   num_snakes = None
 
@@ -190,8 +191,9 @@ def take_order():
   num_males = None
   sex_ratio = None
 
-  all_traits = []
-  pack_traits = []
+  all_snakes_have_traits = []
+  at_least_one_traits = []
+  in_the_pack_traits = []
   ex_traits = []
   trait_count = None
 
@@ -202,6 +204,7 @@ def take_order():
       budget_range = range(int(budget.split("-")[0]),int(budget.split("-")[-1]))
     except:
       print("Sorry, I didn't understand that. Make sure you're not using extra symbols or spaces.")
+  package_order["budget"] = budget_range
   print(f"\nGot it, budget {budget_range}\n")
   
   #getting number of snakes
@@ -220,6 +223,7 @@ def take_order():
         print("Sorry, I didn't understand that. Make sure you're not using extra symbols or spaces.")
     else:
       print("Sorry, I didn't understand that.")
+  package_order["num_snakes"] = num_snakes
   print(f"\nGot it, you are looking for {num_snakes} snakes.\n")
 
   #getting sex/ratio of snakes
@@ -227,11 +231,14 @@ def take_order():
     sex_type = input("Are you looking for males, females, or both? ")
     if sex_type.lower() == "females" or sex_type.lower() == "males":
       sex = sex_type.lower()
+      package_order[sex] = num_snakes
       print(f"\nGot it, package will be made up of only {sex}.\n")
     elif sex_type.lower() == "both":
       if type(num_snakes) == int:
         try:
           num_males = int(input(f"Okay, out of {num_snakes} snakes, how many do you want to be males? "))
+          package_order["males"] = num_males
+          package_order["females"] = num_snakes - num_males
           print(f"\nGot it, {num_males} males and {num_snakes - num_males} females.\n")
         except:
           print("Sorry, I didn't understand that. Make sure you're giving a number.")
@@ -239,44 +246,65 @@ def take_order():
         sex_count = input("Okay, what ratio of males/females are you looking for? (Example: '2/3') ")
         try:
           sex_ratio = range(int(sex_count.split("/")[0]),int(sex_count.split("/")[-1]))
+          package_order["sex_ratio"] = sex_ratio
           print(f"\nGot it, {sex_count.split('/')[0]} males to {sex_count.split('/')[-1]} females.\nIf we can't hit that ratio exactly then we will try to get it as close as possible.\n")
         except:
           print("Sorry, I didn't understand that. Make sure you're not using extra symbols or spaces.")
     else:
       print("Sorry, that's not an option. Please type 'males' 'females' or 'both'.")
-
+  
   #getting traits to include
-  while len(all_traits) == 0 and len(pack_traits) == 0:
-    include_traits_all = input("Let's start picking traits. Are there any traits that you want EVERY snake to have? (Y/N) ")
+  print("Let's start picking traits. We're going to go through 3 options:\n-Traits EVERY snake MUST have (Example: every snake is lavender)\n-Traits that EVERY snake must have AT LEAST one of (Example: every snake should be lavender or het lavender)\n-Traits not every snake needs to have, but should be in the package (Example: one or more of the snakes should have pastel, fire, or yellow belly)\n")
+  while len(all_snakes_have_traits) == 0 and len(at_least_one_traits)== 0 and len(in_the_pack_traits) == 0:
+    include_traits_all = input("Are there any traits that you want EVERY snake to have? (Y/N) ")
     if include_traits_all.upper() == "Y":
       more_traits = "Y"
       while more_traits.upper() == "Y":
         include_traits_all = input("Okay, what trait(s) do you want ALL the snakes to have? (Example: 'lavender/yellow belly/clown') ")
         for trait in include_traits_all.split("/"):
-          if trait in trait_stock and trait not in all_traits:
-            all_traits.append(trait)
+          if trait in trait_stock and trait not in all_snakes_have_traits:
+            all_snakes_have_traits.append(trait)
           else:
             print(f"Sorry, {trait} is not in stock.")
         more_traits = input("Were there any other traits you want ALL the snakes to have? (Y/N) ")
-      print(f"\nGot it, all the snakes in the package must have each of these traits: {all_traits}\n")
+      package_order["all_snakes_traits"] = all_snakes_have_traits
+      print(f"\nGot it, all the snakes in the package will have each of these traits: {all_snakes_have_traits}\n")
     else:
-      all_traits.append(None)
+      all_snakes_have_traits.append(None)
       print("\nGot it, no specific traits that each snake needs to have.\n")
       
+    include_traits_at_least_one = input("Are there any traits you want all the snakes to have at least one of? (Y/N) ")
+    if include_traits_at_least_one.upper() == "Y":
+      more_traits = "Y"
+      while more_traits.upper() == "Y":
+        include_traits_at_least_one = input("Okay, what trait(s) do you want all the snakes to have at least one of? (Example: 'lavender/het lavender/66% het lavender/50% het lavender') ")
+        for trait in include_traits_at_least_one.split("/"):
+          if trait in trait_stock and trait not in at_least_one_traits:
+            at_least_one_traits.append(trait)
+          else:
+            print(f"Sorry, {trait} is not in stock.")
+        more_traits = input("Were there any other traits you want all the snakes to have at least one of? (Y/N) ")
+      package_order["one_of_traits"] = at_least_one_traits
+      print(f"\nGot it, all the snakes in the package will have at least one of these traits: {at_least_one_traits}\n")
+    else:
+      at_least_one_traits.append(None)
+      print("\nGot it, no specific traits that each snake to have at least one of.\n")  
+
     include_traits_pack = input("Okay, were there any traits you want included in the package but not each snake needs to have? (Y/N) ")
     if include_traits_pack.upper() == "Y":
       more_traits = "Y"
       while more_traits.upper() == "Y":
         include_traits_pack = input("Okay, what trait(s) do you want included in the package? (Example: pastel/black head/clown/lavender) ")
         for trait in include_traits_pack.split("/"):
-          if trait in trait_stock and trait not in pack_traits:
-            pack_traits.append(trait)
+          if trait in trait_stock and trait not in in_the_pack_traits:
+            in_the_pack_traits.append(trait)
           else:
             print(f"Sorry, {trait} is not in stock.")
         more_traits= input("Were there any other traits you want included in the package? (Y/N) ")
-      print(f"\nGot it, the package should include these traits: {pack_traits}\n")
+      package_order["pack_traits"] = in_the_pack_traits
+      print(f"\nGot it, the package should include these traits: {in_the_pack_traits}\n")
     else:
-      pack_traits.append(None)
+      in_the_pack_traits.append(None)
       print("\nGot it, no specific traits to include in the package.\n")
 
   #getting traits to exclude
@@ -287,46 +315,47 @@ def take_order():
       while more_traits.upper() == "Y":
         exclude = input("What traits do you want to exclude? (Example: fire/black pastel/pet only) ")
         for trait in exclude.split("/"):
-          if trait in trait_stock and trait not in pack_traits:
+          if trait in trait_stock and trait not in in_the_pack_traits:
             ex_traits.append(trait)
           else:
             print(f"{trait} is not in stock, so no need to worry about that one!")
         more_traits= input("Were there any other traits you want exclude in the package? (Y/N) ")
+      package_order["ex_traits"] = ex_traits
       print(f"\nGot it, no snake in the package will have any of these traits: {ex_traits}\n")
     else:
       ex_traits.append(None)
       print("\nGot it, no excluded traits in the package.\n")
     
-    #getting number of traits per snake
-    trait_min = None
-    trait_max = None
-    while trait_count == None:
-      trait_count_yes = input("Would you like to specify the number of traits in each snake? (Y/N) ")
-      if trait_count_yes.upper() == "Y":
-        while trait_min is None:
+  #getting number of traits per snake
+  trait_min = None
+  trait_max = None
+  while trait_count == None:
+    trait_count_yes = input("Would you like to specify the number of traits in each snake? (Y/N) ")
+    if trait_count_yes.upper() == "Y":
+      while trait_min is None:
+        try:
+          trait_min = int(input("What is the minimum number of traits you would like to have? "))
+        except:
+          print("Sorry, your answer needs to be a number")
+      trait_max_yes = input("Would you like to specify a maximum number of traits in each snake? (Y/N) ")
+      if trait_max_yes.upper() == "Y":
+        while trait_max is None:
           try:
-            trait_min = int(input("What is the minimum number of traits you would like to have? "))
+            trait_max = int(input("What is the maximum number of traits you would like to have? "))
           except:
             print("Sorry, your answer needs to be a number")
-        trait_max_yes = input("Would you like to specify a maximum number of traits in each snake? (Y/N) ")
-        if trait_max_yes.upper() == "Y":
-          while trait_max is None:
-            try:
-              trait_max = int(input("What is the maximum number of traits you would like to have? "))
-            except:
-              print("Sorry, your answer needs to be a number")
-        if trait_max != None:
-          trait_count = range(trait_min, trait_max)
-        else:
-          trait_count = trait_min
-        if trait_max == None:
-          print(f"Got it, only snakes with at least {trait_count} traits will be included.")
-        else:
-          print(f"Got it, only snakes with {trait_count} traits will be included.")
+      if trait_max != None:
+        trait_count = range(trait_min, trait_max)
       else:
-        break
+        trait_count = trait_min
+      package_order["trait_count"] = trait_count
+      if trait_max == None:
+        print(f"\nGot it, only snakes with at least {trait_count} traits will be included.\n")
+      else:
+        print(f"\nGot it, only snakes with {trait_count} traits will be included.\n")
+    else:
+      break
 
-    
     #return this in a dictionary?
        
 #does the thing, makes the magic happen, gives the user best option       
@@ -345,3 +374,5 @@ get_shop_stock()
 in_stock_traits()
 welcome_message()
 take_order()
+
+print(f"Package order: {package_order}")
