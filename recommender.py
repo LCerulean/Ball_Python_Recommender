@@ -181,10 +181,11 @@ Options you can pick from include:
   if see_traits.upper() == "Y":
     categorized_in_stock_traits()
 
+
 #gets the parameters from user and puts them in the package order dictionary
 def take_order():
   
-  budget_range = None
+  budget_max = None
   num_snakes = None
 
   sex = None
@@ -198,14 +199,18 @@ def take_order():
   trait_count = None
 
   #getting budget
-  while budget_range == None:
-    budget = input("Let's get started!\nWhat is your budget? Write it as a range, such as '150-200'\n(recommended minimum range of $50) ")
+  while budget_max == None:
+    budget = input("Let's get started!\nWhat is your maximum budget? (Minimum of $50) ")
     try:
-      budget_range = range(int(budget.split("-")[0]),int(budget.split("-")[-1]))
+      budget = int(budget)
+      if (budget) >= 50:
+        budget_max = budget
+      else:
+        print("Sorry, you're budget range is too small.")
     except:
       print("Sorry, I didn't understand that. Make sure you're not using extra symbols or spaces.")
-  package_order["budget"] = budget_range
-  print(f"\nGot it, budget {budget_range}\n")
+  package_order["budget"] = budget_max
+  print(f"\nGot it, budget {budget}\n")
   
   #getting number of snakes
   while num_snakes == None:
@@ -213,19 +218,22 @@ def take_order():
     if num_snakes_type.lower() == "specific":
       try:
         num_snakes = int(input("Okay, what is the specific number you are looking for? "))
+        print(f"\nGot it, you are looking for {num_snakes} snakes.\n")
       except:
         print("Sorry, I didn't understand that. Make sure you're giving a number.")
     elif num_snakes_type.lower() == "range":
       num_snakes = input("Okay, what is the min and max number of snakes you are looking for? (Example: '2-3') ")
       try:
-        num_snakes = range(int(num_snakes.split("-")[0]),int(num_snakes.split("-")[-1]))
+        min_snakes_package = int(num_snakes.split("-")[0])
+        max_snakes_package = int(num_snakes.split("-")[-1]) + 1
+        num_snakes = range(min_snakes_package,max_snakes_package)
+        print(f"\nGot it, you are looking for {min_snakes_package}-{max_snakes_package - 1} snakes.\n")
       except:
         print("Sorry, I didn't understand that. Make sure you're not using extra symbols or spaces.")
     else:
       print("Sorry, I didn't understand that.")
   package_order["num_snakes"] = num_snakes
-  print(f"\nGot it, you are looking for {num_snakes} snakes.\n")
-
+  
   #getting sex/ratio of snakes
   while sex == None and num_males == None and sex_ratio == None:
     sex_type = input("Are you looking for males, females, or both? ")
@@ -245,7 +253,7 @@ def take_order():
       else:
         sex_count = input("Okay, what ratio of males/females are you looking for? (Example: '2/3') ")
         try:
-          sex_ratio = range(int(sex_count.split("/")[0]),int(sex_count.split("/")[-1]))
+          sex_ratio = {"males":int(sex_count.split("/")[0]), "females":int(sex_count.split("/")[-1])}
           package_order["sex_ratio"] = sex_ratio
           print(f"\nGot it, {sex_count.split('/')[0]} males to {sex_count.split('/')[-1]} females.\nIf we can't hit that ratio exactly then we will try to get it as close as possible.\n")
         except:
@@ -341,7 +349,7 @@ def take_order():
       if trait_max_yes.upper() == "Y":
         while trait_max is None:
           try:
-            trait_max = int(input("What is the maximum number of traits you would like to have? "))
+            trait_max = int(input("What is the maximum number of traits you would like to have? ")) + 1
           except:
             print("Sorry, your answer needs to be a number")
       if trait_max != None:
@@ -352,27 +360,175 @@ def take_order():
       if trait_max == None:
         print(f"\nGot it, only snakes with at least {trait_count} traits will be included.\n")
       else:
-        print(f"\nGot it, only snakes with {trait_count} traits will be included.\n")
+        print(f"\nGot it, only snakes with {trait_min}-{trait_max - 1} traits will be included.\n")
     else:
       break
 
     #return this in a dictionary?
        
-#does the thing, makes the magic happen, gives the user best option       
-def bag_of_snakes(snakes, order):
-  pass
-    #multiple functions needed:
-      # -each Python is a node?
-      # -stack? multiple stacks? finding best "route"?
-      #   -split male/female first (for each, if include excluded genes, wrong number of genes, or over budget, skip)
-      #   -stack for price (order least to most)
-      #   -stack for gene count (order most to least)
-      # -goes through the price and gene stack to find best package deal
+
+#cuts out any snakes that do not fit individual criteria for package    
+def cut_snakes():
+  #removing any snakes that do not fit the required sex (if any)
+  cut1 = []
+  if package_order["sex_ratio"] == None:
+    if package_order["females"] != None:
+      for snake in snakes:
+        if snake["Sex"] == "female":
+          cut1.append(snake)
+    if package_order["males"] != None:
+      for snake in snakes:
+        if snake["Sex"] == "male":
+          cut1.append(snake)
+  else:
+    cut1 = snakes[:]
+  print(f"First cut, removing undesired sex (if any). {len(cut1)} snakes in bag.\n")
+  
+  #removing any snakes that do not have mandetory traits
+  cut2 = []
+  if package_order["all_snakes_traits"] != None:
+    required_count = len(package_order["all_snakes_traits"])
+    for snake in cut1:
+      required_count_have = 0
+      for trait in package_order["all_snakes_traits"]:
+        if trait in snake["Traits"]:
+          required_count_have += 1
+      if required_count_have == required_count: 
+        cut2.append(snake)
+  else:
+    cut2 = cut1[:]
+  if len(cut2) == 0:
+    print(f"Sorry, there aren't any available snakes with {package_order['all_snakes_traits']}\n")
+  else:
+    print(f"Second cut, removing snakes that do not have required traits: {package_order['all_snakes_traits']}. {len(cut2)} snakes in bag.\n")
+
+  #removing snakes that do not have a trait from list of 'at least one' traits
+  cut3 = []
+  if package_order["one_of_traits"] != None:
+    for snake in cut2:
+      for trait in snake["Traits"]:
+        if trait in package_order["one_of_traits"] and snake not in cut3:
+          cut3.append(snake)
+  else:
+    cut3 = cut2[:]
+  if len(cut3) == 0:
+    print(f"Sorry, there aren't any available snakes left with {package_order['one_of_traits']}\n")
+  else:
+    print(f"Third cut, removing snakes that do not have at least one of these traits: {package_order['one_of_traits']}. {len(cut3)} snakes in bag.\n")
+
+  #removing snakes that have a trait from the list 'ex_traits'
+  cut4 = []
+  if package_order["ex_traits"] != None:
+    for snake in cut3:
+      exclude_snake = "N"
+      for trait in package_order["ex_traits"]:
+        if trait in snake["Traits"]:
+          exclude_snake = "Y"
+          break
+      if exclude_snake == "N":
+        cut4.append(snake)
+  else:
+    cut4 = cut3[:]
+  if len(cut4) == 0:
+    print(f"Sorry, there aren't any available snakes left that don't have one of these undesired traits: {package_order['ex_traits']}\n")
+  else:
+    print(f"Fourth cut, removing snakes that have any of these undesired traits: {package_order['ex_traits']}. {len(cut4)} snakes in bag.\n")
+  
+  #removing snakes that do not have desired number of traits
+  cut5 = []
+  if package_order["trait_count"] != None:
+    #if only given min required traits
+    if type(package_order["trait_count"]) is int:
+      for snake in cut4:
+        trait_count = 0
+        for trait in snake["Traits"]:
+          trait_count += 1
+        if trait_count >= package_order["trait_count"]:
+          cut5.append(snake)
+    #if given a min and max required traits
+    else:
+      for snake in cut4:
+        trait_count = 0
+        for trait in snake["Traits"]:
+          trait_count += 1
+        if trait_count in package_order["trait_count"]:
+          cut5.append(snake)
+  else:
+    cut5 = cut4[:]
+  if len(cut5) == 0:
+    print(f"Sorry, there aren't any available snakes left that don't have the desired number of traits: {package_order['trait_count']}\n")
+  else:
+    print(f"Fifth cut, removing snakes that do not have the desired number of traits: {package_order['trait_count']}. {len(cut5)} snakes in bag.\n")
+
+  #removing any remainging snakes that cost more than the budget maximum
+  final_cut = []
+  budget_cap = package_order["budget"]
+  for snake in cut5:
+    if snake["Price"] <= budget_cap:
+      final_cut.append(snake)
+  if len(cut5) == 0:
+    print(f"Sorry, there aren't any available snakes left that are under the budget maximum: ${budget_cap}\n")
+  else:
+    print(f"Final cut, removing snakes that are outside of the budget maximum: ${budget_cap}. {len(final_cut)} snakes in bag.\n")
+  
+  final_snake_count = len(final_cut)
+  final_males = 0
+  final_females = 0
+  for snake in final_cut:
+    if snake["Sex"] == "male":
+      final_males += 1
+    elif snake["Sex"] == "female":
+      final_females += 1
+
+  bag_meets_min = True
+  #checking if there are enough snakes left after the cuts to fill the order 
+  try:
+    min_snake_count = min(value for value in package_order["num_snakes"])
+    if final_snake_count < min_snake_count:
+      print(f"It looks like we don't have enough snakes left for your desired package. {final_snake_count} snakes left after cuts.")
+      bag_meets_min = False
+  except:
+    if package_order["num_snakes"] > final_snake_count:
+      print(f"It looks like we don't have enough snakes left for your desired package. {final_snake_count} snakes left after cuts.")
+      bag_meets_min = False
+
+  #checking if there are enough males/females left after the cuts to fill the order
+  if package_order["sex_ratio"] != None:
+    if package_order["sex_ratio"]["males"] > final_males:
+      print(f"It looks like we don't have enough males for your desired package. {final_males} males left after cuts.")
+      bag_meets_min = False
+    if package_order["sex_ratio"]["females"] > final_females:
+      print(f"It looks like we don't have enough females for your desired package. {final_females} females left after cuts.")
+      bag_meets_min = False
+  else:
+    if package_order["males"] != None:
+      if package_order["males"] > final_males:
+        print(f"It looks like we don't have enough males for your desired package. {final_males} males left after cuts.")
+        bag_meets_min = False
+    if package_order["females"] != None:
+      if package_order["females"] > final_females:
+        print(f"It looks like we don't have enough females for your desired package. {final_females} females left after cuts.")
+        bag_meets_min = False
+
+  if bag_meets_min == True:
+    print()
+    return final_cut
+  else:
+    print()
+    return False
+
+
+
+#multiple functions needed:
+  # -each Python is a node?
+  # -stack? multiple stacks? finding best "route"?
+  #   -stack for price (order least to most)
+  #   -stack for gene count (order most to least)
+  # -goes through the price and gene stack to find best package deal
 
 
 get_shop_stock()
 in_stock_traits()
 welcome_message()
 take_order()
-
-print(f"Package order: {package_order}")
+meets_requirements = cut_snakes()
