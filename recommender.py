@@ -1,10 +1,5 @@
 import json
 
-#should allow input of shop link
-#builds a recommended group of ball pythons for purchase based on:
-
-  # take into account shipping price and store discounts
-
 
 snakes = []
 trait_stock = []
@@ -557,11 +552,7 @@ split_lists = split_sexes(possible_package)
 possible_males = split_lists[0]
 possible_females = split_lists[1]
 
-for snake in possible_males:
-  print(snake)
-print()
-for snake in possible_females:
-  print(snake)
+
 
 #multiple functions needed:
   # -each Python is a node?
