@@ -8,10 +8,10 @@ import json
 
 snakes = []
 trait_stock = []
-discounts = {2:10, 3:15, 4:20}
-for i in range(5-10):
+discounts = {1:None, 2:10, 3:15, 4:20}
+for i in range(5,10):
   discounts[i] = 25
-for i in range(10-100):
+for i in range(10,100):
   discounts[i] = 30
 
 package_order = {"budget":None, "num_snakes":None, "discount":None, "females":None, "males":None, "sex_ratio":None, "all_snakes_traits":None, "one_of_traits":None, "pack_traits":None, "ex_traits":None, "trait_count":None}
@@ -35,7 +35,7 @@ def get_shop_stock():
             trait_count = len(traits_split)
             count = 0
             while count < trait_count:
-              #joining percents with hets  and their corrisponding trait in single string
+              #joining percents with hets  and their corresponding trait in single string
               if traits_split[count] == "50%" or traits_split[count] == "66%":
                 trait = traits_split[count] + " " + traits_split[count+1] + " " + traits_split[count+2]
                 #skipping "albino" in the case of finding lavender, lavender is assumed albino
@@ -46,7 +46,7 @@ def get_shop_stock():
                 if count >= len(traits_split):
                   break
 
-              #joinging 100% hets with corrisponding trait in single string  
+              #joining 100% hets with corresponding trait in single string  
               elif traits_split[count] == "het":
                 trait = traits_split[count] + " " + traits_split[count+1]
                 #skipping "albino" in the case of finding lavender, lavender is assumed albino
@@ -118,7 +118,7 @@ def categorized_in_stock_traits():
     else:
       formatted_traits.append(trait)
 
-  #seperates recessive and codominant traits and puts recessive traits in a better order for display
+  #separates recessive and codominant traits and puts recessive traits in a better order for display
   for trait in formatted_traits:
     if trait.find("lavender") >= 0 or trait.find("piebald") >= 0 or trait.find("clown") >= 0:
       recessive_traits.append(trait)
@@ -331,7 +331,7 @@ def take_order():
             ex_traits.append(trait)
           else:
             print(f"{trait} is not in stock, so no need to worry about that one!")
-        more_traits= input("Were there any other traits you want exclude in the package? (Y/N) ")
+        more_traits= input("Were there any other traits you want to exclude in the package? (Y/N) ")
       package_order["ex_traits"] = ex_traits
       print(f"\nGot it, no snake in the package will have any of these traits: {ex_traits}\n")
     else:
@@ -388,7 +388,7 @@ def cut_snakes():
     cut1 = snakes[:]
   print(f"\nFirst cut, removing undesired sex (if any). {len(cut1)} snakes in bag.\n")
   
-  #removing any snakes that do not have mandetory traits
+  #removing any snakes that do not have mandatory traits
   cut2 = []
   if package_order["all_snakes_traits"] != None:
     required_count = len(package_order["all_snakes_traits"])
@@ -464,12 +464,16 @@ def cut_snakes():
   else:
     print(f"Fifth cut, removing snakes that do not have the desired number of traits: {package_order['trait_count']}. {len(cut5)} snakes in bag.\n")
 
-  #removing any remainging snakes that cost more than the budget maximum
+  #removing any remaining snakes that cost more than the budget maximum
   final_cut = []
   budget_cap = package_order["budget"]
   for snake in cut5:
-    if int(snake["Price"]-(snake["Price"] / package_order["discount"])) <= budget_cap:
-      final_cut.append(snake)
+    if type(package_order["discount"]) == int:
+      if (snake["Price"]-(snake["Price"] / int(package_order["discount"]))) <= budget_cap:
+        final_cut.append(snake)
+    else:
+      if snake["Price"] <= budget_cap:
+        final_cut.append(snake)
   if len(cut5) == 0:
     print(f"Sorry, there aren't any available snakes left that are under the budget maximum: ${budget_cap}\n")
   else:
@@ -522,6 +526,19 @@ def cut_snakes():
     return None
 
 
+#splits group into 2 lists: males, females
+def split_sexes(snake_package):
+  males_list = []
+  females_list = []
+  for snake in snake_package:
+    if snake["Sex"] == "male":
+      males_list.append(snake)
+    else:
+      females_list.append(snake)
+  return males_list, females_list
+
+
+
 
 get_shop_stock()
 in_stock_traits()
@@ -535,6 +552,16 @@ while possible_package == None:
     #reset package_order so no traits left in lists from previous attempt
     package_order = {"budget":None, "num_snakes":None, "females":None, "males":None, "sex_ratio":None, "all_snakes_traits":None, "one_of_traits":None, "pack_traits":None, "ex_traits":None, "trait_count":None}
     print("Let's try again. Are there any requirements you could lower or do without?\n")
+
+split_lists = split_sexes(possible_package)
+possible_males = split_lists[0]
+possible_females = split_lists[1]
+
+for snake in possible_males:
+  print(snake)
+print()
+for snake in possible_females:
+  print(snake)
 
 #multiple functions needed:
   # -each Python is a node?
