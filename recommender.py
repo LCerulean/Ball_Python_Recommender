@@ -1,5 +1,6 @@
 import json
 from max_heap import MaxHeap 
+from bp_package_class import Ball_Python_Package
 
 snakes = []
 trait_stock = []
@@ -602,24 +603,29 @@ get_shop_stock()
 in_stock_traits()
 welcome_message()
 
-possible_package = None
-while possible_package == None:
+possible_snakes = None
+while possible_snakes == None:
   take_order()
-  possible_package = cut_snakes()
-  if possible_package == None:
+  possible_snakes = cut_snakes()
+  if possible_snakes == None:
     #reset package_order so no traits left in lists from previous attempt
     package_order = {"budget":None, "num_snakes":0, "discount":None, "females":0, "males":0, "all_snakes_traits":None, "one_of_traits":None, "pack_traits":None, "ex_traits":None, "trait_count":None}
     print("Let's try again. Are there any requirements you could lower or do without?\n")
-
-possible_males = possible_package[0]
-possible_females = possible_package[1]
+possible_males = possible_snakes[0]
+possible_females = possible_snakes[1]
 
 
 
 #multiple functions needed:
-  # -each Python is a node?
-  # -stack? multiple stacks? finding best "route"?
-  #   -stack for price (order least to most)
-  #   -stack for gene count (order most to least)
-  # -goes through the price and gene stack to find best package deal
-
+  #each package a node
+    #if both males and females, build all possible packages that fit budget, then combine male/female packages in all possible packages that fit budget
+    #remove all packages that do not fit "include in package traits" (if none, keep packages that are closest to fitting requirement)
+  #sort packages by:
+    #package price, lowest to highest
+    #trait count, highest to lowest
+  #new sort, but new index is sum of index of package in the two previous sorts, lowest index is the best package
+  #return 3 lists:
+    #overall best package
+    #lowest price package
+    #highest trait count package
+  #user selects which package they want, prints out all the snakes that make up that package (in a nice format)
