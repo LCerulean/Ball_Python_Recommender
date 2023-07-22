@@ -26,3 +26,40 @@ class Ball_Python_Package:
         if trait not in self.package_traits:
           self.package_traits.append(trait)
     return self
+  
+  def find_all_pack_combos(self, snake_list, num_snakes, budget_cap):
+    all_combos = []
+    final_combos = []
+    for i in len(snake_list):
+      combo = [i]
+      count_snakes = 1
+      idx_count = 1
+      ###NEEDS WORK, NOT YET CREATING ALL POSSIBLE COMBOS###
+      while count_snakes < num_snakes:
+        combo.append(snake_list[i+idx_count])
+        count_snakes += 1
+        idx_count += 1
+        if count_snakes >= len(snake_list) or idx_count not in len(snake_list):
+          break
+      if len(combo) == num_snakes and combo not in all_combos:
+        all_combos.append(combo)
+    #removing combos outside budget_cap
+    for combo in all_combos:
+      price = 0
+      for snake in combo:
+        price += snake["Price"]
+      if price > budget_cap:
+        all_combos.remove(combo)
+    #removing duplicate combos, putting combos in final_combos
+    for combo in all_combos:
+      removed_combo = combo
+      all_combos.remove(combo)
+      snakes_match = 0
+      for snake in removed_combo:
+        for remaining_combos in all_combos:
+          for remaining_snakes in remaining_combos:
+            if remaining_snakes == snake:
+              snakes_match += 1
+      if snakes_match != num_snakes:
+        final_combos.append(removed_combo)
+    return final_combos
