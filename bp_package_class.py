@@ -1,3 +1,4 @@
+import itertools
 #Python class (lol)
 
 class Ball_Python_Package:
@@ -5,6 +6,7 @@ class Ball_Python_Package:
     self.price = price
     self.snakes = snakes
     self.package_traits = package_traits
+
 
   def build_bp_package(self, snake_list):
     for snake in snake_list:
@@ -14,6 +16,7 @@ class Ball_Python_Package:
         if trait not in self.package_traits:
           self.package_traits.append(trait)
     return self
+
 
   def combine_bp_packages(self, package1, package2):
     self.price = package1.price + package2.price
@@ -27,30 +30,20 @@ class Ball_Python_Package:
           self.package_traits.append(trait)
     return self
   
-  def find_all_pack_combos(self, snake_list, num_snakes, budget_cap):
+
+  def find_all_list_combos(self, snake_list, num_snakes, budget_cap):
+    #finding all combos that fit count and budget constraits
     all_combos = []
-    final_combos = []
-    for i in len(snake_list):
-      combo = [i]
-      count_snakes = 1
-      idx_count = 1
-      ###NEEDS WORK, NOT YET CREATING ALL POSSIBLE COMBOS###
-      while count_snakes < num_snakes:
-        combo.append(snake_list[i+idx_count])
-        count_snakes += 1
-        idx_count += 1
-        if count_snakes >= len(snake_list) or idx_count not in len(snake_list):
-          break
-      if len(combo) == num_snakes and combo not in all_combos:
-        all_combos.append(combo)
-    #removing combos outside budget_cap
-    for combo in all_combos:
-      price = 0
-      for snake in combo:
-        price += snake["Price"]
-      if price > budget_cap:
-        all_combos.remove(combo)
+    for i in range(0,len(snake_list)+1):
+      combo = list(itertools.combinations(snake_list,i))
+      if len(combo) == num_snakes:
+        price = 0
+        for snake in combo:
+          price += snake["Price"]
+        if price <= budget_cap:
+          all_combos.append(combo)
     #removing duplicate combos, putting combos in final_combos
+    final_combos = []
     for combo in all_combos:
       removed_combo = combo
       all_combos.remove(combo)
@@ -63,3 +56,20 @@ class Ball_Python_Package:
       if snakes_match != num_snakes:
         final_combos.append(removed_combo)
     return final_combos
+  
+  def find_all_pack_combos(self, male_combos, female_combos, budget, include_in_package_traits = None):
+    all_pack_combos = []
+    for male_combo in male_combos:
+      for female_combo in female_combos:
+        if male_combo.price + female_combo.price <= budget:
+          combo = self.combine_bp_packages(male_combo,female_combo)
+          if include_in_package_traits != None:
+            traits_count = 0
+            for trait in include_in_package_traits:
+              if trait in combo.package_traits:
+                traits_count +=1
+            if traits_count == len(include_in_package_traits):
+              all_pack_combos.append(combo)
+          else:
+            all_pack_combos.append(combo)
+    return all_pack_combos

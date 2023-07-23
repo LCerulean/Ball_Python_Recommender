@@ -1,6 +1,6 @@
 import json
 from max_heap import MaxHeap 
-from bp_package_class import Ball_Python_Package
+from bp_package_class import *
 
 snakes = []
 trait_stock = []
@@ -430,9 +430,8 @@ def cut_by_trait_num(list_to_cut):
   return cut
 
 
-#removes any snakes that are outside of budget
+#removes any snakes that are outside of budget, also returns min price for male and female packages
 def cut_by_price(list_to_cut):
-  cut_lists = []
   package_possible = True
   
   #removing any male prices too expensive for package in individual sex list
@@ -470,11 +469,12 @@ def cut_by_price(list_to_cut):
         package_possible = False
   
   #comparing male and female price lists against each other to remove any snakes outside budget when both sexes in package
+  min_males_price = 0
+  min_female_price = 0
   if package_possible == True:
     package_still_possible = True
     if package_order["males"] != 0 and package_order["females"] != 0:
       #checking females prices against min male group price, removing if out of budget
-      min_males_price = 0
       for price in male_price_list[0:(min_males)]:
         min_males_price += price
       while min_males_price + female_price_list[-1] > package_order["budget"]:
@@ -483,7 +483,6 @@ def cut_by_price(list_to_cut):
         print(f"Sorry, it looks like a package with {min_females} females is over your budget.")
         package_still_possible = False
       #checking males prices against min female group price, removing if out of budget
-      min_female_price = 0
       for price in female_price_list[0:(min_females)]:
         min_female_price += price
       while min_female_price + male_price_list[-1] > package_order["budget"]:
@@ -508,7 +507,7 @@ def cut_by_price(list_to_cut):
           female_list.remove(snake)
         
   if package_still_possible:
-    return male_list, female_list
+    return male_list, female_list, min_males_price, min_female_price
   else:
     return None
 
@@ -527,7 +526,7 @@ def divide_sexes(list_to_divide):
   return males, females
 
 
-#cuts out any snakes that do not fit individual criteria for package
+#cuts out any snakes that do not fit individual criteria for package and returns male and female lists,also returns minimum price for male and female packages
 def cut_snakes():
   package_possible = True
   #removing any snakes that are not of desired sex (if any)
@@ -590,14 +589,16 @@ def cut_snakes():
     if final_cut != None and package_possible == True:
       males_list = final_cut[0]
       females_list = final_cut[1]
+      min_male_package_price = final_cut[2]
+      min_female_package_price = final_cut[3]
       print(f"\nMaking final cut, removing snakes outside of budget... Splitting by sex... {len(males_list)} males and {len(females_list)} females in bag.\n")
-      return males_list,females_list
+      return males_list,females_list, min_male_package_price, min_female_package_price
     else:
       return None
   except:
     return None
-  
-  
+
+
 
 get_shop_stock()
 in_stock_traits()
@@ -613,8 +614,16 @@ while possible_snakes == None:
     print("Let's try again. Are there any requirements you could lower or do without?\n")
 possible_males = possible_snakes[0]
 possible_females = possible_snakes[1]
+min_male_pack_price = possible_snakes[2]
+min_female_pack_price = possible_snakes[3]
 
+if package_order['males'] > 0:
+  possible_male_combos = Ball_Python_Package.find_all_list_combos(snake_list=possible_males, num_snakes=package_order['males'],budget_cap=(package_order['budget']-min_female_pack_price))
+if package_order['females'] > 0:
+  possible_female_combos = Ball_Python_Package.find_all_list_combos(snake_list=possible_females, num_snakes=package_order['females'],budget_cap=(package_order['budget']-min_male_pack_price))
 
+if package_order['males'] > 0 and package_order['females'] > 0:
+   pass
 
 #multiple functions needed:
   #each package a node
