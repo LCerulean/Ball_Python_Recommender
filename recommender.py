@@ -361,6 +361,45 @@ def heapsort_snakes(list_to_sort, sort_by):
   return sort
 
 
+#rearranges packs by most to least traits in package
+def heapsort_packs_by_num_traits(package_list_to_sort):
+  sort = []
+  max_heap = MaxHeap()
+  for pack in package_list_to_sort:
+    idx = len(pack.package_traits)
+    max_heap.add(idx)
+  while max_heap.count > 0:
+    max_value = max_heap.retrieve_max()
+    sort.insert(0, max_value)
+  print(sort)
+
+  packs_ordered_by_trait_count = []
+  for i in sort:
+    for pack in package_list_to_sort:
+      if len(pack.package_traits) == i:
+        packs_ordered_by_trait_count.append(pack)
+  most_to_least_trait_count_packs = packs_ordered_by_trait_count.reverse()
+  return most_to_least_trait_count_packs
+
+
+#rearranges packs by least to most expensive package
+def heapsort_packs_by_price(package_list_to_sort):
+  sort = []
+  packs_ordered_by_trait_count = []
+  max_heap = MaxHeap()
+  for pack in package_list_to_sort:
+    idx = pack['price']
+    max_heap.add(idx)
+  while max_heap.count > 0:
+    max_value = max_heap.retrieve_max()
+    sort.insert(0, max_value)
+  for i in sort:
+    for pack in package_list_to_sort:
+      if pack['price'] == i:
+        packs_ordered_by_trait_count.append(pack)
+  return packs_ordered_by_trait_count
+
+
 #removes any snakes that do not fit the required sex (if any)
 def cut_by_sex(list_to_cut):
   cut = []
@@ -598,6 +637,64 @@ def cut_snakes():
   except:
     return None
 
+#finding all combos that fit count and budget constraits, converting each combo to a Ball_Python_Package
+def find_combos_lists_to_packs(snake_list, num_snakes, budget_cap):
+  all_combos = []
+  snakes = snake_list
+  pack_size = num_snakes
+  for combo_snakes in itertools.combinations(snakes, pack_size):
+    combo_pack = Ball_Python_Package()
+    combo_pack.build_bp_package(snake_list=combo_snakes)
+    if combo_pack.price <= budget_cap:  
+      all_combos.append(combo_pack)
+  return all_combos
+
+
+#In mixed sex packages, combines the male and female packages and returns a list of the packages that fit the budget and have the required traits in the package
+def find_combos_male_female_packs(male_combo_packs, female_combo_packs, budget, include_in_package_traits = None):
+  all_pack_combos = []
+  for male_combo in male_combo_packs:
+    for female_combo in female_combo_packs:
+      if male_combo.price + female_combo.price <= budget:
+        combo = Ball_Python_Package()
+        combo.combine_bp_packages(male_combo,female_combo)
+        if include_in_package_traits != None:
+          traits_count = 0
+          for trait in include_in_package_traits:
+            if trait in combo.package_traits:
+              traits_count +=1
+          if traits_count == len(include_in_package_traits):
+            all_pack_combos.append(combo)
+        else:
+          all_pack_combos.append(combo)
+  return all_pack_combos
+
+
+def best_overall_packages(list_by_traits, list_by_price):
+  packages_ranked = []
+  for trait_package in list_by_traits:
+    package_rank = list_by_traits.index(trait_package)
+    for price_package in list_by_price:
+      if price_package == trait_package:
+        package_rank += list_by_price.index(price_package)
+    packages_ranked.append([package_rank, trait_package])
+  best_packages = []
+  best_rank = 100
+  for package in packages_ranked:
+    if package[0] < best_rank:
+      best_rank = package[0]
+  for package in packages_ranked:
+    if package[0] == best_rank:
+      best_packages.append(package[1])
+  if len(best_packages) == 1:
+    return best_packages[0]
+  else:
+    best_traits = heapsort_packs_by_num_traits(best_packages)
+    best_price = heapsort_packs_by_price(best_packages)
+    return best_traits[0], best_price[0]
+
+  
+
 
 
 get_shop_stock()
@@ -618,12 +715,50 @@ min_male_pack_price = possible_snakes[2]
 min_female_pack_price = possible_snakes[3]
 
 if package_order['males'] > 0:
-  possible_male_combos = Ball_Python_Package.find_all_list_combos(snake_list=possible_males, num_snakes=package_order['males'],budget_cap=(package_order['budget']-min_female_pack_price))
+  possible_male_combos = find_combos_lists_to_packs(possible_males, package_order['males'], (package_order['budget']-min_female_pack_price))
 if package_order['females'] > 0:
-  possible_female_combos = Ball_Python_Package.find_all_list_combos(snake_list=possible_females, num_snakes=package_order['females'],budget_cap=(package_order['budget']-min_male_pack_price))
+  possible_female_combos = find_combos_lists_to_packs(possible_females, package_order['females'],(package_order['budget']-min_male_pack_price))
 
-if package_order['males'] > 0 and package_order['females'] > 0:
-   pass
+### DO NOT RUN!!! Computer cannot handle it, too large, need to shrink lists that are going into this
+# if package_order['males'] > 0 and package_order['females'] > 0:
+#   possible_male_and_female_combos = find_combos_male_female_packs(possible_male_combos, possible_female_combos, package_order['budget'], package_order['pack_traits'])
+#   print(f"Possible male and female combos: {possible_female_combos[0]}")
+#   print("Sorting by most to least traits in package...\n")
+#   ### error here, returning "None"
+#   by_most_traits_packages = heapsort_packs_by_num_traits(possible_male_and_female_combos)
+#   print(by_most_traits_packages[0])
+#   print("Sorting by least to most expensive package...\n")
+#   ### error here, returning "[]"
+#   by_least_expensive_packages = heapsort_packs_by_price(possible_male_and_female_combos)
+#   print(by_least_expensive_packages[0])
+
+# print("Finding best overall package...\n")
+# best_overall_package = best_overall_packages(by_most_traits_packages, by_least_expensive_packages)
+
+# print("Done!\n")
+
+# if len(best_overall_package) == 1:
+#   print(f"Best overall package is:")
+#   for snake in best_overall_package:
+#     print(snake)
+# else:
+#   print("There are two equally good overall packages:")
+#   print("Best overall package by number of traits in package:")
+#   for snake in best_overall_package[0]:
+#     print(snake)
+#   print("\nBest overall package by price:")
+#   for snake in best_overall_package[1]:
+#     print(snake)
+
+# print("\nHighest trait count package inside budget:")
+# most_traits_package = by_most_traits_packages[0]
+# for snake in most_traits_package:
+#   print(snake)
+
+# print("\nLowest price package that fits trait requirements:")
+# least_expensive_package = by_least_expensive_packages[0]
+# for snake in least_expensive_package:
+#   print(snake)
 
 #multiple functions needed:
   #each package a node
