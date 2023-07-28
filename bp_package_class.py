@@ -10,8 +10,10 @@ class Ball_Python_Package:
 
   def build_bp_package(self, snake_list):
     for snake in snake_list:
+      if snake not in self.snakes:
+        self.snakes.append(snake)
+    for snake in self.snakes:
       self.price += snake["Price"]
-      self.snakes.append(snake)
       for trait in snake["Traits"]:
         if trait not in self.package_traits:
           self.package_traits.append(trait)

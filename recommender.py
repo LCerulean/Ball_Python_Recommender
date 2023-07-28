@@ -637,14 +637,27 @@ def cut_snakes():
   except:
     return None
 
+
+#If a list's length is over 10, cuts the ends off of a list until the length is 10
+def shrink_list_to_10(list_to_shrink):
+  if len(list_to_shrink) > 10:
+    cut_by = (len(list_to_shrink) - 10) // 2
+    shrunk_list = list_to_shrink[cut_by:-cut_by]
+    while len(shrunk_list) > 10:
+      shrunk_list.pop(-1)
+    return shrunk_list
+  else:
+    return list_to_shrink
+
+
 #finding all combos that fit count and budget constraits, converting each combo to a Ball_Python_Package
 def find_combos_lists_to_packs(snake_list, num_snakes, budget_cap):
   all_combos = []
-  snakes = snake_list
-  pack_size = num_snakes
-  for combo_snakes in itertools.combinations(snakes, pack_size):
-    combo_pack = Ball_Python_Package()
-    combo_pack.build_bp_package(snake_list=combo_snakes)
+  pos_combos = itertools.combinations(snake_list, num_snakes)
+  list_combos = list(pos_combos)
+  for combo in list_combos:
+    combo_pack = Ball_Python_Package(snakes=combo)
+    combo_pack.build_bp_package(combo)
     if combo_pack.price <= budget_cap:  
       all_combos.append(combo_pack)
   return all_combos
@@ -656,7 +669,7 @@ def find_combos_male_female_packs(male_combo_packs, female_combo_packs, budget, 
   for male_combo in male_combo_packs:
     for female_combo in female_combo_packs:
       if male_combo.price + female_combo.price <= budget:
-        combo = Ball_Python_Package()
+        combo = Ball_Python_Package(snakes=[])
         combo.combine_bp_packages(male_combo,female_combo)
         if include_in_package_traits != None:
           traits_count = 0
@@ -716,13 +729,23 @@ min_female_pack_price = possible_snakes[3]
 
 if package_order['males'] > 0:
   possible_male_combos = find_combos_lists_to_packs(possible_males, package_order['males'], (package_order['budget']-min_female_pack_price))
+  print(len(possible_male_combos))
+  ten_male_combos = shrink_list_to_10(possible_male_combos)
+  print(f'Length 10 male combos: {len(ten_male_combos)}')
+
+
 if package_order['females'] > 0:
   possible_female_combos = find_combos_lists_to_packs(possible_females, package_order['females'],(package_order['budget']-min_male_pack_price))
+  print(len(possible_female_combos))
+  ten_female_combos = shrink_list_to_10(possible_female_combos)
+  print(len(ten_female_combos))
+
+
 
 ### DO NOT RUN!!! Computer cannot handle it, too large, need to shrink lists that are going into this
 # if package_order['males'] > 0 and package_order['females'] > 0:
-#   possible_male_and_female_combos = find_combos_male_female_packs(possible_male_combos, possible_female_combos, package_order['budget'], package_order['pack_traits'])
-#   print(f"Possible male and female combos: {possible_female_combos[0]}")
+#   possible_male_and_female_combos = find_combos_male_female_packs(ten_male_combos, ten_female_combos, package_order['budget'], package_order['pack_traits'])
+#   print(f"Possible male and female combos: {possible_male_and_female_combos[0]}")
 #   print("Sorting by most to least traits in package...\n")
 #   ### error here, returning "None"
 #   by_most_traits_packages = heapsort_packs_by_num_traits(possible_male_and_female_combos)
