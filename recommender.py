@@ -366,12 +366,14 @@ def heapsort_packs_by_num_traits(package_list_to_sort):
   sort = []
   max_heap = MaxHeap()
   for pack in package_list_to_sort:
+    print(pack.package_traits)
     idx = len(pack.package_traits)
+    print(f"pack idx: {idx}") ### some error occuring after idx 8, "'NoneType" object not subscriptable, those that were returned are wrong length ###
     max_heap.add(idx)
   while max_heap.count > 0:
     max_value = max_heap.retrieve_max()
     sort.insert(0, max_value)
-  print(sort)
+  print(sort)     ### error here, returning list of repeated numbers in length of package_list_to_sort ###
 
   packs_ordered_by_trait_count = []
   for i in sort:
@@ -380,6 +382,32 @@ def heapsort_packs_by_num_traits(package_list_to_sort):
         packs_ordered_by_trait_count.append(pack)
   most_to_least_trait_count_packs = packs_ordered_by_trait_count.reverse()
   return most_to_least_trait_count_packs
+
+
+#finds the max num of traits in all packs in given list and returns a list with only packages with max traits
+def most_traits_packs(package_list_to_cut):
+  max_packs = []
+  max_traits = 0
+  for pack in package_list_to_cut:
+    if len(pack.package_traits) > max_traits:
+      max_traits = len(pack.package_traits)
+  for pack in package_list_to_cut:
+    if len(pack.package_traits) == max_traits:
+      max_packs.append(pack)
+  return max_packs
+
+
+#finds best priced packs in list and returns only those with the best price
+def best_price_packs(package_list_to_cut):
+  cheap_packs = []
+  price_min = package_list_to_cut[0].price
+  for pack in package_list_to_cut:
+    if pack.price < price_min:
+      price_min = pack.price
+  for pack in package_list_to_cut:
+    if pack.price == price_min:
+      cheap_packs.append(pack)
+  return cheap_packs
 
 
 #rearranges packs by least to most expensive package
@@ -669,7 +697,7 @@ def find_combos_male_female_packs(male_combo_packs, female_combo_packs, budget, 
   for male_combo in male_combo_packs:
     for female_combo in female_combo_packs:
       if male_combo.price + female_combo.price <= budget:
-        combo = Ball_Python_Package(snakes=[])
+        combo = Ball_Python_Package(price=0, snakes=[], package_traits=[])
         combo.combine_bp_packages(male_combo,female_combo)
         if include_in_package_traits != None:
           traits_count = 0
@@ -738,22 +766,29 @@ if package_order['females'] > 0:
   possible_female_combos = find_combos_lists_to_packs(possible_females, package_order['females'],(package_order['budget']-min_male_pack_price))
   print(len(possible_female_combos))
   ten_female_combos = shrink_list_to_10(possible_female_combos)
-  print(len(ten_female_combos))
+  print(f'Length 10 female combos: {len(ten_female_combos)}')
 
 
+if package_order['males'] > 0 and package_order['females'] > 0:
+  possible_male_and_female_combos = find_combos_male_female_packs(ten_male_combos, ten_female_combos, package_order['budget'], package_order['pack_traits'])
 
-### DO NOT RUN!!! Computer cannot handle it, too large, need to shrink lists that are going into this
-# if package_order['males'] > 0 and package_order['females'] > 0:
-#   possible_male_and_female_combos = find_combos_male_female_packs(ten_male_combos, ten_female_combos, package_order['budget'], package_order['pack_traits'])
-#   print(f"Possible male and female combos: {possible_male_and_female_combos[0]}")
-#   print("Sorting by most to least traits in package...\n")
-#   ### error here, returning "None"
-#   by_most_traits_packages = heapsort_packs_by_num_traits(possible_male_and_female_combos)
-#   print(by_most_traits_packages[0])
-#   print("Sorting by least to most expensive package...\n")
-#   ### error here, returning "[]"
-#   by_least_expensive_packages = heapsort_packs_by_price(possible_male_and_female_combos)
-#   print(by_least_expensive_packages[0])
+count = 1
+for combo in possible_male_and_female_combos:
+  print(f"combo {count}: {len(combo.package_traits)}")
+  print(combo.package_traits)
+  print()
+  count += 1
+
+  # print("Sorting by most to least traits in package...\n")
+  # ### error here, returning list of repeated numbers in length of possible_male_and_female_combos ###
+  # by_most_traits_packages = heapsort_packs_by_num_traits(possible_male_and_female_combos)
+  # print(by_most_traits_packages[0])
+  # print("Sorting by least to most expensive package...\n")
+  # ### error here, returning "'NoneType' object is not subscriptable" 
+  # by_least_expensive_packages = heapsort_packs_by_price(possible_male_and_female_combos)
+  # print(by_least_expensive_packages[0])
+
+
 
 # print("Finding best overall package...\n")
 # best_overall_package = best_overall_packages(by_most_traits_packages, by_least_expensive_packages)
