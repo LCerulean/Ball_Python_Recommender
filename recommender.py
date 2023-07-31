@@ -384,30 +384,64 @@ def heapsort_packs_by_num_traits(package_list_to_sort):
   return most_to_least_trait_count_packs
 
 
-#finds the max num of traits in all packs in given list and returns a list with only packages with max traits
-def most_traits_packs(package_list_to_cut):
+#arranges list of packages by most to least pack traits
+def arrange_by_most_pack_traits(package_list_arrange):
+  copy_list_to_arrange = package_list_arrange[:]
+  num_packs = len(copy_list_to_arrange)
   max_packs = []
-  max_traits = 0
-  for pack in package_list_to_cut:
-    if len(pack.package_traits) > max_traits:
-      max_traits = len(pack.package_traits)
-  for pack in package_list_to_cut:
-    if len(pack.package_traits) == max_traits:
-      max_packs.append(pack)
+  while len(max_packs) != num_packs:
+    max_traits = 0
+    for pack in copy_list_to_arrange:
+      if len(pack.package_traits) > max_traits:
+        max_traits = len(pack.package_traits)
+    for pack in copy_list_to_arrange:
+      if len(pack.package_traits) == max_traits:
+        max_packs.append(pack)
+        copy_list_to_arrange.remove(pack)
   return max_packs
 
 
-#finds best priced packs in list and returns only those with the best price
-def best_price_packs(package_list_to_cut):
+#arranges list of packages by best price
+def arrange_by_price(package_list_arrange):
+  copy_list_to_arrange = package_list_arrange[:]
+  num_packs = len(copy_list_to_arrange)
   cheap_packs = []
-  price_min = package_list_to_cut[0].price
-  for pack in package_list_to_cut:
-    if pack.price < price_min:
-      price_min = pack.price
-  for pack in package_list_to_cut:
-    if pack.price == price_min:
-      cheap_packs.append(pack)
+  while len(cheap_packs) != num_packs:
+    price_min = copy_list_to_arrange[0].price
+    for pack in copy_list_to_arrange:
+      if pack.price < price_min:
+        price_min = pack.price
+    for pack in copy_list_to_arrange:
+      if pack.price == price_min:
+        cheap_packs.append(pack)
+        copy_list_to_arrange.remove(pack)
   return cheap_packs
+
+
+def arrange_by_best_overall_package(package_list_arrange):
+  best_price = arrange_by_price(package_list_arrange)
+  best_traits = arrange_by_most_pack_traits(package_list_arrange)
+  #using index positions of packs in both best price and best traits to generate a "value" score for arranging packs by best overall
+  idx_dict = {}
+  for trait_pack in best_traits:
+    trait_idx = best_traits.index(trait_pack)
+    for price_pack in best_price:
+      if price_pack == trait_pack:
+        price_idx = best_price.index(price_pack)
+    idx_key = trait_idx + price_idx
+    if idx_key in idx_dict:
+      while idx_key in idx_dict:
+        idx_key += 1
+    idx_dict[idx_key] = trait_pack
+  #rearranging package list by overall best packages
+  num_packs = len(package_list_arrange)
+  best_packs = []
+  while len(best_packs) != num_packs:
+    min_idx = min(idx_dict)
+    best_packs.append(idx_dict[min_idx])
+    idx_dict.pop(min_idx)
+  return best_packs
+
 
 
 #rearranges packs by least to most expensive package
@@ -772,12 +806,14 @@ if package_order['females'] > 0:
 if package_order['males'] > 0 and package_order['females'] > 0:
   possible_male_and_female_combos = find_combos_male_female_packs(ten_male_combos, ten_female_combos, package_order['budget'], package_order['pack_traits'])
 
-count = 1
-for combo in possible_male_and_female_combos:
-  print(f"combo {count}: {len(combo.package_traits)}")
-  print(combo.package_traits)
+by_best_pack = arrange_by_best_overall_package(possible_male_and_female_combos)
+
+print(f"length by best pack: {len(by_best_pack)}")
+for pack in by_best_pack:
+  print(f"Pack Price: ${pack.price}  Number of Traits: {len(pack.package_traits)}")
+  for snake in pack.snakes:
+    print(f"Title: {snake['Title*']}  ID: {snake['Animal_Id*']}  Price: ${snake['Price']}")
   print()
-  count += 1
 
   # print("Sorting by most to least traits in package...\n")
   # ### error here, returning list of repeated numbers in length of possible_male_and_female_combos ###
