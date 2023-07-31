@@ -1,4 +1,5 @@
 import json
+import itertools
 from max_heap import MaxHeap 
 from bp_package_class import *
 
@@ -401,6 +402,23 @@ def arrange_by_most_pack_traits(package_list_arrange):
   return max_packs
 
 
+#arranges list of packages by overall value of included traits in each package
+def arrange_by_highest_pack_trait_value(package_list_arrange):
+  copy_list_to_arrange = package_list_arrange[:]
+  num_packs = len(copy_list_to_arrange)
+  max_value_packs = []
+  while len(max_value_packs) != num_packs:
+    max_value = 0
+    for pack in copy_list_to_arrange:
+      if pack.pack_trait_value > max_value:
+        max_value = len(pack.package_traits)
+    for pack in copy_list_to_arrange:
+      if len(pack.package_traits) == max_value:
+        max_value_packs.append(pack)
+        copy_list_to_arrange.remove(pack)
+  return max_value_packs
+
+
 #arranges list of packages by best price
 def arrange_by_price(package_list_arrange):
   copy_list_to_arrange = package_list_arrange[:]
@@ -418,17 +436,18 @@ def arrange_by_price(package_list_arrange):
   return cheap_packs
 
 
+#arranges list of packages by best overall, taking into account trait count and trait value
 def arrange_by_best_overall_package(package_list_arrange):
-  best_price = arrange_by_price(package_list_arrange)
-  best_traits = arrange_by_most_pack_traits(package_list_arrange)
+  best_trait_count = arrange_by_most_pack_traits(package_list_arrange)
+  best_value = arrange_by_highest_pack_trait_value(package_list_arrange)
   #using index positions of packs in both best price and best traits to generate a "value" score for arranging packs by best overall
   idx_dict = {}
-  for trait_pack in best_traits:
-    trait_idx = best_traits.index(trait_pack)
-    for price_pack in best_price:
-      if price_pack == trait_pack:
-        price_idx = best_price.index(price_pack)
-    idx_key = trait_idx + price_idx
+  for trait_pack in best_trait_count:
+    trait_idx = best_trait_count.index(trait_pack)
+    for value_pack in best_value:
+      if value_pack == trait_pack:
+        value_idx = best_value.index(value_pack)
+    idx_key = trait_idx + value_idx
     if idx_key in idx_dict:
       while idx_key in idx_dict:
         idx_key += 1
@@ -441,7 +460,6 @@ def arrange_by_best_overall_package(package_list_arrange):
     best_packs.append(idx_dict[min_idx])
     idx_dict.pop(min_idx)
   return best_packs
-
 
 
 #rearranges packs by least to most expensive package
@@ -700,16 +718,33 @@ def cut_snakes():
     return None
 
 
-#If a list's length is over 10, cuts the ends off of a list until the length is 10
-def shrink_list_to_10(list_to_shrink):
-  if len(list_to_shrink) > 10:
-    cut_by = (len(list_to_shrink) - 10) // 2
-    shrunk_list = list_to_shrink[cut_by:-cut_by]
-    while len(shrunk_list) > 10:
-      shrunk_list.pop(-1)
+# #shrinks list of packages if length over 100
+# def shrink_to_100(list_to_shrink):
+#   if len(list_to_shrink) > 100:
+#     cut_by = (len(list_to_shrink) - 100)
+#     print(f"List to be cut by {cut_by}")
+#     print("Arranging list by price...")
+#     arranged_price_list = arrange_by_price(list_to_shrink)
+#     print(f"List arranged! Now cutting out {cut_by} lowest quality packages...")
+#     shrunk_list = arranged_price_list[cut_by:]
+#     return shrunk_list
+#   else:
+#     return list_to_shrink
+
+
+#shrinks list of packages if length specified
+def shrink_to_specific(list_to_shrink, shrink_to_num):
+  if len(list_to_shrink) > shrink_to_num:
+    cut_by = (len(list_to_shrink) - shrink_to_num)
+    print(f"List to be cut by {cut_by}")
+    print("Arranging list by price...")
+    arranged_price_list = arrange_by_price(list_to_shrink)
+    print(f"List arranged! Now cutting out {cut_by} lowest quality packages...")
+    shrunk_list = arranged_price_list[cut_by:]
     return shrunk_list
   else:
     return list_to_shrink
+
 
 
 #finding all combos that fit count and budget constraits, converting each combo to a Ball_Python_Package
@@ -789,30 +824,65 @@ possible_females = possible_snakes[1]
 min_male_pack_price = possible_snakes[2]
 min_female_pack_price = possible_snakes[3]
 
+#getting possible packages for males and/or females based on package order
 if package_order['males'] > 0:
   possible_male_combos = find_combos_lists_to_packs(possible_males, package_order['males'], (package_order['budget']-min_female_pack_price))
-  print(len(possible_male_combos))
-  ten_male_combos = shrink_list_to_10(possible_male_combos)
-  print(f'Length 10 male combos: {len(ten_male_combos)}')
-
-
+  print(f"Found {len(possible_male_combos)} possible male combos.")
 if package_order['females'] > 0:
   possible_female_combos = find_combos_lists_to_packs(possible_females, package_order['females'],(package_order['budget']-min_male_pack_price))
-  print(len(possible_female_combos))
-  ten_female_combos = shrink_list_to_10(possible_female_combos)
-  print(f'Length 10 female combos: {len(ten_female_combos)}')
-
-
+  print(f"Found {len(possible_female_combos)} possible female combs.")
+#calculating final packages (and combining male and female if order calls for both) 
 if package_order['males'] > 0 and package_order['females'] > 0:
-  possible_male_and_female_combos = find_combos_male_female_packs(ten_male_combos, ten_female_combos, package_order['budget'], package_order['pack_traits'])
+  if len(possible_female_combos) + len(possible_male_combos) > 500:
+    print("Wow, there's a few too many combos that could be made from that! Lets cut the lesser combos to bring that total down a bit...")
+    shrink_num = (len(possible_female_combos) + len(possible_male_combos)) // 2
+    shrunk_males = shrink_to_specific(possible_male_combos, shrink_num)
+    shurnk_females = shrink_to_specific(possible_female_combos, shrink_num)
+    possible_male_combos = shrunk_males
+    print(f"Now {len(possible_male_combos)} possible male combos.")
+    possible_female_combos = shurnk_females
+    print(f"Now {len(possible_female_combos)} possible female combs.")
+  print("Combining male and female combos...")
+  possible_male_and_female_combos = find_combos_male_female_packs(possible_male_combos, possible_female_combos, package_order['budget'], package_order['pack_traits'])
+  print(f"Found {len(possible_male_and_female_combos)} possible male and female combos.")
+  #if number of combos exceeds 100, cuts down to 100
+  if len(possible_male_and_female_combos) > 50:
+    print(f"Wow, that's a lot of combos! Cutting out {len(possible_male_and_female_combos)-50} lowest quality combos...")
+    reduced_mf_combos = shrink_to_specific(possible_male_and_female_combos, 50)
+    possible_male_and_female_combos = reduced_mf_combos
+  print("\nFinding best overall packages...")
+  by_best_pack = arrange_by_best_overall_package(possible_male_and_female_combos)
+elif package_order['males'] > 0:
+  if len(possible_male_combos) > 50:
+    print(f"Wow, that's a lot of combos! Cutting out {len(possible_male_combos)-50} lowest quality combos...")
+    reduced_male_combos = shrink_to_specific(possible_male_combos, 50)
+    possible_male_combos = reduced_male_combos
+  print("\nFinding best overall packages...")
+  by_best_pack = arrange_by_best_overall_package(possible_male_combos)
+else:
+  if len(possible_female_combos) > 50:
+    print(f"Wow, that's a lot of combos! Cutting out {len(possible_female_combos)-50} lowest quality combos...")
+    reduced_female_combos = shrink_to_specific(possible_female_combos, 50)
+    possible_female_combos = reduced_female_combos
+  print("\nFinding best overall packages...")
+  by_best_pack = arrange_by_best_overall_package(possible_female_combos)
 
-by_best_pack = arrange_by_best_overall_package(possible_male_and_female_combos)
+#reducing best packs to top 3 choices
+if len(by_best_pack) >= 3:
+  top_overall_packs = by_best_pack[:3]
+else:
+  top_overall_packs = by_best_pack
 
-print(f"length by best pack: {len(by_best_pack)}")
-for pack in by_best_pack:
-  print(f"Pack Price: ${pack.price}  Number of Traits: {len(pack.package_traits)}")
+
+print("\n----------------------------")
+print("Top 3 Best Overall Packages:")
+print("----------------------------\n")
+count = 1
+for pack in top_overall_packs:
+  print(f"Pack {count}: Price: ${pack.price}0   Number of Unique Traits: {len(pack.package_traits)}")
+  count += 1
   for snake in pack.snakes:
-    print(f"Title: {snake['Title*']}  ID: {snake['Animal_Id*']}  Price: ${snake['Price']}")
+    print(f"        {snake['Animal_Id*']}: {snake['Title*']}   Price: ${snake['Price']}0")
   print()
 
   # print("Sorting by most to least traits in package...\n")

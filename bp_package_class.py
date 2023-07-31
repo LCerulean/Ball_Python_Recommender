@@ -1,9 +1,10 @@
-import itertools
-#Python class (lol)
+#Ball_Python_Package puts together snakes into groups
+#TraitValue assigns a value to traits for use in determining the value of Ball_Python_Package traits list
 
 class Ball_Python_Package:
-  def __init__(self, price=0, snakes=[], package_traits=[]):
+  def __init__(self, price=0, pack_trait_value=0, snakes=[], package_traits=[]):
     self.price = price
+    self.pack_trait_value = pack_trait_value
     self.snakes = snakes
     self.package_traits = package_traits
 
@@ -17,6 +18,8 @@ class Ball_Python_Package:
       for trait in snake["Traits"]:
         if trait not in self.package_traits:
           self.package_traits.append(trait)
+          trait_value = self.get_trait_value(trait)
+          self.pack_trait_value += trait_value
 
 
   def combine_bp_packages(self, package1, package2):
@@ -29,3 +32,24 @@ class Ball_Python_Package:
       for trait in snake["Traits"]:
         if trait not in self.package_traits:
           self.package_traits.append(trait)
+          trait_value = self.get_trait_value(trait)
+          self.pack_trait_value += trait_value
+
+
+  def get_trait_value (self, trait):
+    recessive_visual_t = ['lavender', 'piebald', 'clown']
+    recessive_het_t = ['het lavender', 'het piebald', 'het clown']
+    recessive_pos_het_t = ['50% het lavender', '50% het piebald', '50% het clown', '66% het lavender', '66% het piebald', '66% het clown']
+    t_not_genetic = ['pet only', 'paradox']
+
+    if trait in recessive_visual_t:
+      t_value = 3
+    elif trait in recessive_het_t:
+      t_value = 2
+    elif trait in recessive_pos_het_t:
+      t_value = 1
+    elif trait in t_not_genetic:
+      t_value = 0
+    else:
+      t_value = 2
+    return t_value
