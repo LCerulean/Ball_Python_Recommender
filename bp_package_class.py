@@ -37,9 +37,9 @@ class Ball_Python_Package:
 
 
   def get_trait_value (self, trait):
-    recessive_visual_t = ['lavender', 'piebald', 'clown']
-    recessive_het_t = ['het lavender', 'het piebald', 'het clown']
-    recessive_pos_het_t = ['50% het lavender', '50% het piebald', '50% het clown', '66% het lavender', '66% het piebald', '66% het clown']
+    recessive_visual_t = ['lavender', 'piebald', 'clown', 'hypo']
+    recessive_het_t = ['het lavender', 'het piebald', 'het clown', 'het hypo']
+    recessive_pos_het_t = ['pos het lavender', 'pos het piebald', 'pos het clown', 'pos het hypo', '50% het lavender', '50% het piebald', '50% het clown', '50% het hypo', '66% het lavender', '66% het piebald', '66% het clown', '66% het hypo']
     t_not_genetic = ['pet only', 'paradox']
 
     if trait in recessive_visual_t:
