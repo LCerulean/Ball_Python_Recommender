@@ -18,8 +18,9 @@ class Ball_Python_Package:
       for trait in snake["Traits"]:
         if trait not in self.package_traits:
           self.package_traits.append(trait)
-          trait_value = self.get_trait_value(trait)
-          self.pack_trait_value += trait_value
+    for trait in self.package_traits:
+      trait_value = self.get_trait_value(trait)
+      self.pack_trait_value += trait_value
 
 
   def combine_bp_packages(self, package1, package2):
@@ -32,8 +33,9 @@ class Ball_Python_Package:
       for trait in snake["Traits"]:
         if trait not in self.package_traits:
           self.package_traits.append(trait)
-          trait_value = self.get_trait_value(trait)
-          self.pack_trait_value += trait_value
+    for trait in self.package_traits:
+      trait_value = self.get_trait_value(trait)
+      self.pack_trait_value += trait_value
 
 
   def get_trait_value (self, trait):
