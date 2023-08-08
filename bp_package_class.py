@@ -2,8 +2,9 @@
 #TraitValue assigns a value to traits for use in determining the value of Ball_Python_Package traits list
 
 class Ball_Python_Package:
-  def __init__(self, price=0, pack_trait_value=0, snakes=[], package_traits=[]):
+  def __init__(self, price=0, pack_trait_count=0, pack_trait_value=0, snakes=[], package_traits=[]):
     self.price = price
+    self.pack_trait_count = pack_trait_count
     self.pack_trait_value = pack_trait_value
     self.snakes = snakes
     self.package_traits = package_traits
@@ -19,6 +20,7 @@ class Ball_Python_Package:
         if trait not in self.package_traits:
           self.package_traits.append(trait)
     for trait in self.package_traits:
+      self.pack_trait_count += 1
       trait_value = self.get_trait_value(trait)
       self.pack_trait_value += trait_value
 
@@ -34,6 +36,7 @@ class Ball_Python_Package:
         if trait not in self.package_traits:
           self.package_traits.append(trait)
     for trait in self.package_traits:
+      self.pack_trait_count += 1
       trait_value = self.get_trait_value(trait)
       self.pack_trait_value += trait_value
 
