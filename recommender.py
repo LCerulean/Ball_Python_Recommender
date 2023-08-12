@@ -13,7 +13,7 @@ for i in range(10,100):
 
 package_order = {"budget":None, "num_snakes":0, "discount":None, "females":0, "males":0, "all_snakes_traits":None, "one_of_traits":None, "pack_traits":None, "ex_traits":None, "trait_count":None}
 
-
+###Setup functions-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #pulls relevant data from json file, converts to desired format in 'snakes' list (each index is a dictionary of individual snake)
 def get_shop_stock():
   #convert to read and write to shop_data file, each snake on it's own line
@@ -101,7 +101,6 @@ def categorized_in_stock_traits():
   formatted_traits = []
   recessive_traits = []
   codominant_traits = []
-
   #standardizing trait string length for printing
   len_trait_block = 0
   for trait in trait_stock:
@@ -114,24 +113,26 @@ def categorized_in_stock_traits():
       formatted_traits.append(trait)
     else:
       formatted_traits.append(trait)
-
   #separates recessive and codominant traits and puts recessive traits in a better order for display
   for trait in formatted_traits:
     if trait.find("lavender") >= 0 or trait.find("piebald") >= 0 or trait.find("clown") >= 0 or trait.find("hypo") >= 0:
       recessive_traits.append(trait)
     else:
       codominant_traits.append(trait)
-  #rearranging recessive_traits so it doesn't look like crap
+  #rearranging recessive_traits so it lists them from highest to lowest value (visuals, followed by 100% hets, followed by 66%, followed by 50%, ending with pos hets)
   reordering_recessives = []
   for trait in recessive_traits:
     if trait.find("het") == -1:
       reordering_recessives.append(trait)
   for trait in recessive_traits:
-    if trait.find("het") >= 0 and trait.find("%") == -1:
+    if trait.find("het") >= 0 and trait.find("%") == -1 and trait.find("pos") == -1:
       reordering_recessives.append(trait)
   for trait in recessive_traits:
     if trait[0] == "6":
       reordering_recessives.append(trait)
+  for trait in recessive_traits:
+    if trait[0] == "5":
+      reordering_recessives.append(trait)   
   for trait in recessive_traits:
     if trait not in reordering_recessives:
       reordering_recessives.append(trait)
@@ -158,17 +159,16 @@ def categorized_in_stock_traits():
   print(trait_col_header)
   
 
-#graphics display, welcome, list of things it can do
+#welcome measage, list of things it can do and provides user with list of in stock traits if desired
 def welcome_message():
   welcome = """
-*********************************************************************
-************  Welcome to the Ball Python Recommender!  **************
-*********************************************************************
-The purpose of this program is to aid BP breeders in putting together 
-the best packages for customers based on their budget, desired traits,
-and number of snakes in a time efficent manner.  This program by 
-default is using an example inventory file from the Crescent Serpents 
-MorphMarket shop.
+*******************************************************************************
+*****************  Welcome to the Ball Python Recommender!  *******************
+*******************************************************************************
+The purpose of this program is to aid BP breeders in putting together the best
+packages for customers based on their budget, desired traits, and number of
+snakes in a time efficent manner.  This program by default is using an example
+inventory file from the Crescent Serpents MorphMarket shop (it is not current).
 
 
 To use your own shop file:
@@ -185,20 +185,11 @@ To use your own shop file:
   print("\nLet's get started!")
 
 
-#LONG ONE, gets the parameters from user and puts them in the package_order dictionary
+###function for getting requirements for package and preparing snake list for processing--------------------------------------------------------------------------------------------------------
+#Gets the parameters from user and puts them in the package_order dictionary
 def take_order():
-  
-  budget_max = None
-  num_snakes = 0
-  sex = None
-
-  all_snakes_have_traits = []
-  at_least_one_traits = []
-  in_the_pack_traits = []
-  ex_traits = []
-  trait_count = None
-
   #getting budget
+  budget_max = None
   while budget_max == None:
     budget = input("\nWhat is the maximum budget? (Minimum of $50) ")
     try:
@@ -210,7 +201,6 @@ def take_order():
     except:
       print("Sorry, I didn't understand that. Make sure you're not using extra symbols or spaces.")
   package_order["budget"] = budget_max
-
   print()
   
   #getting number and sex of snakes for package.
@@ -228,14 +218,13 @@ def take_order():
       print("Sorry, I can't build a package out of 0 snakes...")
     else:
       package_order['num_snakes'] = package_order['males'] + package_order['females']
-
-  
   print()
 
-  #getting traits to include
   print("Let's start picking traits. We're going to go through 3 options of traits to include and 1 option to exclude:\n")
-  while len(all_snakes_have_traits) == 0 and len(at_least_one_traits)== 0 and len(in_the_pack_traits) == 0:
-    #getting traits all animals should have
+
+  #getting traits all animals should have
+  all_snakes_have_traits = []
+  while len(all_snakes_have_traits) == 0:
     include_traits_all = input("1. Are there any traits that EVERY snake MUST to have? Such as 'every snake is piebald' (Y/N) ")
     if include_traits_all.upper() == "Y":
       more_traits = "Y"
@@ -250,10 +239,11 @@ def take_order():
       package_order["all_snakes_traits"] = all_snakes_have_traits
     else:
       all_snakes_have_traits.append(None)
-    
-    print()
+  print()
 
-    #getting list of traits each animal should have at least one of from list
+  #getting list of traits each animal should have at least one of from list
+  at_least_one_traits = []
+  while len(at_least_one_traits)== 0:
     include_traits_at_least_one = input("2. Are there any traits EVERY snake must have AT LEAST one of? Such as 'every snake is either lavender or het lavender' (Y/N) ")
     if include_traits_at_least_one.upper() == "Y":
       more_traits = "Y"
@@ -268,10 +258,11 @@ def take_order():
       package_order["one_of_traits"] = at_least_one_traits
     else:
       at_least_one_traits.append(None)
+  print()
 
-    print()
-
-    #getting traits that should be in the package but not every animal needs to have
+  #getting traits that should be in the package but not every animal needs to have
+  in_the_pack_traits = []
+  while len(in_the_pack_traits) == 0:
     include_traits_pack = input("3. Are there any traits that MUST be included in the PACKAGE, but not every snake needs to have? Such as 'at least one pastel and one yellow belly' (Y/N) ")
     if include_traits_pack.upper() == "Y":
       more_traits = "Y"
@@ -286,10 +277,10 @@ def take_order():
       package_order["pack_traits"] = in_the_pack_traits
     else:
       in_the_pack_traits.append(None)
-
   print()
 
   #getting traits to exclude
+  ex_traits = []
   while len(ex_traits) == 0:
     exclude = input("4. Are there any traits you do NOT want included in the package? Such as 'no snake will have spider' (Y/N) ")
     if exclude.upper() == "Y":
@@ -305,10 +296,10 @@ def take_order():
       package_order["ex_traits"] = ex_traits
     else:
       ex_traits.append(None)
-    
   print()
 
-  #getting number of traits per snake
+  #getting required number of traits per snake (if any)
+  trait_count = None
   trait_min = None
   trait_max = None
   while trait_count == None:
@@ -335,7 +326,21 @@ def take_order():
       break
 
 
-#sorts LISTS of snakes by specified key in snake dict
+#divides snake list into two seperate lists (males and females)
+def divide_sexes(list_to_divide):
+  males = []
+  females = []
+  for snake in list_to_divide:
+    if snake["Sex"] == "male":
+      males.append(snake)
+    elif snake["Sex"] == "female":
+      females.append(snake)
+    else:
+      continue
+  return males, females
+
+
+#sorts LISTS of snakes by specified key in snake dict, used in cut_by_price function to find lowest possible price package
 def heapsort_snakes_by(list_to_sort, sort_by):
   sort = []
   max_heap = MaxHeap()
@@ -348,110 +353,7 @@ def heapsort_snakes_by(list_to_sort, sort_by):
   return sort
 
 
-#arranges list of packages by most to least pack traits
-def arrange_by_most_pack_traits(package_list_arrange):
-  copy_list_to_arrange = package_list_arrange[:]
-  num_packs = len(copy_list_to_arrange)
-  max_packs = []
-  while len(max_packs) != num_packs:
-    max_traits = 0
-    for pack in copy_list_to_arrange:
-      if len(pack.package_traits) > max_traits:
-        max_traits = len(pack.package_traits)
-    for pack in copy_list_to_arrange:
-      if len(pack.package_traits) == max_traits:
-        max_packs.append(pack)
-        copy_list_to_arrange.remove(pack)
-  return max_packs
-
-
-#arranges list of packages by overall value of included traits in each package
-def arrange_by_highest_pack_trait_value(package_list_arrange):
-  copy_list_to_arrange = package_list_arrange[:]
-  num_packs = len(copy_list_to_arrange)
-  max_value_packs = []
-  while len(max_value_packs) != num_packs:
-    max_value = 0
-    for pack in copy_list_to_arrange:
-      if pack.pack_trait_value > max_value:
-        max_value = pack.pack_trait_value
-    for pack in copy_list_to_arrange:
-      if pack.pack_trait_value == max_value:
-        max_value_packs.append(pack)
-        copy_list_to_arrange.remove(pack)
-  return max_value_packs
-
-
-#arranges list of packages by lowest to highest price (used in 'shrink_to_specific' function in the case of too many possible options)
-def arrange_by_price(package_list_arrange):
-  copy_list_to_arrange = package_list_arrange[:]
-  num_packs = len(copy_list_to_arrange)
-  cheap_packs = []
-  while len(cheap_packs) != num_packs:
-    price_min = copy_list_to_arrange[0].price
-    for pack in copy_list_to_arrange:
-      if pack.price < price_min:
-        price_min = pack.price
-    for pack in copy_list_to_arrange:
-      if pack.price == price_min:
-        cheap_packs.append(pack)
-        copy_list_to_arrange.remove(pack)
-  return cheap_packs
-
-
-#arranges list of packages by best overall, taking into account trait count and trait value
-def arrange_by_best_overall_package(package_list_arrange):
-  print("arranging by most pack traits...")
-  best_trait_count = arrange_by_most_pack_traits(package_list_arrange)
-  print(f"Best trait count package: ({best_trait_count[0].pack_trait_count}){best_trait_count[0].package_traits}, this package's trait value: {best_trait_count[0].pack_trait_value}\n")
-  print("arranging by highest pack trait value...")
-  best_value = arrange_by_highest_pack_trait_value(package_list_arrange)
-  print(f"Best trait value package: ({best_value[0].pack_trait_count}){best_value[0].package_traits}, this package's trait value: {best_value[0].pack_trait_value}\n")
-  #using index positions of packs in both best price and best traits to generate a "value" score for arranging packs by best overall
-  idx_dict = {}
-  print("Getting trait index...")
-  for trait_pack in best_trait_count:
-    trait_idx = best_trait_count.index(trait_pack)
-    for value_pack in best_value:
-      if value_pack == trait_pack:
-        value_idx = best_value.index(value_pack)
-    idx_key = trait_idx + value_idx
-    if idx_key in idx_dict:
-      while idx_key in idx_dict:
-        idx_key += 1
-    idx_dict[idx_key] = trait_pack
-  #rearranging package list by overall best packages
-  num_packs = len(package_list_arrange)
-  best_packs = []
-  print("Rearranging packs by best...")
-  while len(best_packs) != num_packs:
-    min_idx = min(idx_dict)
-    best_packs.append(idx_dict[min_idx])
-    idx_dict.pop(min_idx)
-  print("Rearranging finished!")
-  return best_packs
-
-
-#only keeps packs with reasonably balanced snake prices, to avoid situations where most snakes in pack worth $1000+ and then a $75 snake thrown in with them
-def balanced_snake_price_packs_only(package_list_to_cut):
-  balanced_packs = []
-  try:
-    for pack in package_list_to_cut:
-      min_reasonable_price = pack.price // ((len(pack.snakes) - 1) * 10)
-      pack_balanced = True
-      for snake in pack.snakes:
-        if snake['Price'] < min_reasonable_price:
-          pack_balanced = False
-      if pack_balanced == True:
-        balanced_packs.append(pack)
-    if len(balanced_packs) > 1:
-      return balanced_packs
-    else:
-      return package_list_to_cut
-  except:
-    return package_list_to_cut
-
-
+###functions for remvoing snakes that do not fit requirements, or cutting to improve package quality----------------------------------------------------------------------------------------------
 #removes any snakes that do not fit the required sex (if any)
 def cut_by_sex(list_to_cut):
   cut = []
@@ -499,7 +401,7 @@ def cut_by_trait(list_to_cut, trait_requirement):
   return cut
 
 
-#removes any snakes that do not have the required number of traits
+#removes any snakes that do not have the required number of traits (if any)
 def cut_by_trait_num(list_to_cut):
   cut = []
   #if only given min
@@ -603,21 +505,7 @@ def cut_by_price(list_to_cut):
     return None
 
 
-#divides snakes in list by sex, returning two lists: males, females
-def divide_sexes(list_to_divide):
-  males = []
-  females = []
-  for snake in list_to_divide:
-    if snake["Sex"] == "male":
-      males.append(snake)
-    elif snake["Sex"] == "female":
-      females.append(snake)
-    else:
-      continue
-  return males, females
-
-
-#cuts out any snakes that do not fit individual criteria for package and returns male and female lists,also returns minimum price for male and female packages
+#combination of cut functions, cuts out any snakes that do not fit individual criteria for package and returns male and female lists,also returns minimum price for male and female packages
 def cut_snakes():
   package_possible = True
   #removing any snakes that are not of desired sex (if any)
@@ -690,25 +578,53 @@ def cut_snakes():
     return None
 
 
-#shrinks list of packages if length specified
-def shrink_to_specific(list_to_shrink, shrink_to_num):
-  if len(list_to_shrink) > shrink_to_num:
-    cut_by = (len(list_to_shrink) - shrink_to_num)
-    arranged_price_list = arrange_by_price(list_to_shrink)
-    shrunk_list = arranged_price_list[cut_by:]
-    return shrunk_list
-  else:
-    return list_to_shrink
+#only keeps packs with reasonably balanced snake prices, to avoid extreem value differences within packs (ex. $2000 and $50 snakes in same package)
+def balanced_snake_price_packs_only(package_list_to_cut):
+  balanced_packs = []
+  try:
+    for pack in package_list_to_cut:
+      min_reasonable_price = pack.price // ((len(pack.snakes) - 1) * 10)
+      pack_balanced = True
+      for snake in pack.snakes:
+        if snake['Price'] < min_reasonable_price:
+          pack_balanced = False
+      if pack_balanced == True:
+        balanced_packs.append(pack)
+    if len(balanced_packs) > 1:
+      return balanced_packs
+    else:
+      return package_list_to_cut
+  except:
+    return package_list_to_cut
 
 
-#finding all combos that fit count and budget constraits, converting each combo to a Ball_Python_Package
-#functions 'balanced_snake_price_packs_only' and 'remove_doppelganger' used to cut out less desirable and near duplicate packs
+#Removes near idential packs (such as when packs are same price and have all the same traits due to sibling snakes with identical traits)
+def remove_doppelganger_packs(package_list_to_cut):
+  copy_list_to_cut = package_list_to_cut[:]
+  cut_list = []
+  for pack in copy_list_to_cut:
+    cut_list.append(pack)
+    copy_list_to_cut.remove(pack)
+    for other_pack in copy_list_to_cut:
+      if pack.price == other_pack.price:
+        if len(pack.package_traits) == len(other_pack.package_traits):
+          traits_match = True
+          for trait in pack.package_traits:
+            if trait not in other_pack.package_traits:
+              traits_match = False
+          if traits_match == True:
+            copy_list_to_cut.remove(other_pack)
+  return cut_list
+
+         
+###package making functions------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#finding all combos that fit count and budget constraits, converting each combo to a Ball_Python_Package: functions 'balanced_snake_price_packs_only' and 'remove_doppelganger' used to cut out less desirable and near duplicate packs
 def find_combos_lists_to_packs(snake_list, num_snakes, budget_cap):
   all_combos = []
   pos_combos = itertools.combinations(snake_list, num_snakes)
   list_combos = list(pos_combos)
   for combo in list_combos:
-    combo_pack = Ball_Python_Package(snakes=combo)
+    combo_pack = Ball_Python_Package(price=0, pack_trait_count=0, pack_trait_value=0, snakes=[], package_traits=[])
     combo_pack.build_bp_package(combo)
     if combo_pack.price <= budget_cap:  
       all_combos.append(combo_pack)
@@ -717,8 +633,7 @@ def find_combos_lists_to_packs(snake_list, num_snakes, budget_cap):
   return unique_combos
 
 
-#In mixed sex packages, combines the male and female packages and returns a list of the packages that fit the budget and have the required traits in the package
-#functions 'shrink_to_specific', 'balanced_snake_price_packs_only' and 'within_75_percent_budget' built in to cut out packages that are less than ideal
+#combines the male/female packages and returns a list of the packages that fit the budget and trait requirements: functions 'shrink_to_specific', 'balanced_snake_price_packs_only' and 'within_75_percent_budget' built in to cut out packages that are less than ideal
 def find_balanced_combos(budget, combo_packs1, combo_packs2=None, include_in_package_traits = None):
   all_pack_combos = []
   shrunk_combos1 = shrink_to_specific(combo_packs1, 250)
@@ -728,7 +643,7 @@ def find_balanced_combos(budget, combo_packs1, combo_packs2=None, include_in_pac
       for combo2 in shrunk_combos2:
         mf_combo_price = combo1.price + combo2.price
         if  mf_combo_price <= budget:
-          combo = Ball_Python_Package(price=0, snakes=[], package_traits=[])
+          combo = Ball_Python_Package(price=0, pack_trait_count=0, pack_trait_value=0, snakes=[], package_traits=[])
           combo.combine_bp_packages(combo1,combo2)
           if include_in_package_traits != None:
             traits_count = 0
@@ -756,6 +671,103 @@ def find_balanced_combos(budget, combo_packs1, combo_packs2=None, include_in_pac
   return balanced_combos_final
 
 
+###arragement functions for identifying best packages-----------------------------------------------------------------------------------------------------------------------------------------------
+#arranges list of packages by most to least pack traits
+def arrange_by_most_pack_traits(package_list_arrange):
+  copy_list_to_arrange = package_list_arrange[:]
+  num_packs = len(copy_list_to_arrange)
+  max_packs = []
+  while len(max_packs) != num_packs:
+    max_traits = 0
+    for pack in copy_list_to_arrange:
+      if len(pack.package_traits) > max_traits:
+        max_traits = len(pack.package_traits)
+    for pack in copy_list_to_arrange:
+      if len(pack.package_traits) == max_traits:
+        max_packs.append(pack)
+        copy_list_to_arrange.remove(pack)
+  return max_packs
+
+
+#arranges list of packages by overall value of included traits in each package
+def arrange_by_highest_pack_trait_value(package_list_arrange):
+  copy_list_to_arrange = package_list_arrange[:]
+  num_packs = len(copy_list_to_arrange)
+  max_value_packs = []
+  while len(max_value_packs) != num_packs:
+    max_value = 0
+    for pack in copy_list_to_arrange:
+      if pack.pack_trait_value > max_value:
+        max_value = pack.pack_trait_value
+    for pack in copy_list_to_arrange:
+      if pack.pack_trait_value == max_value:
+        max_value_packs.append(pack)
+        copy_list_to_arrange.remove(pack)
+  return max_value_packs
+
+
+#arranges list of packages by lowest to highest price (used in 'shrink_to_specific' function in the case of too many possible options)
+def arrange_by_price(package_list_arrange):
+  copy_list_to_arrange = package_list_arrange[:]
+  num_packs = len(copy_list_to_arrange)
+  cheap_packs = []
+  while len(cheap_packs) != num_packs:
+    price_min = copy_list_to_arrange[0].price
+    for pack in copy_list_to_arrange:
+      if pack.price < price_min:
+        price_min = pack.price
+    for pack in copy_list_to_arrange:
+      if pack.price == price_min:
+        cheap_packs.append(pack)
+        copy_list_to_arrange.remove(pack)
+  return cheap_packs
+
+
+#arranges list of packages by best overall, taking into account trait count and trait value
+def arrange_by_best_overall_package(package_list_arrange):
+  print("arranging by most pack traits...")
+  best_trait_count = arrange_by_most_pack_traits(package_list_arrange)
+  print(f"Best trait count package: ({best_trait_count[0].pack_trait_count}){best_trait_count[0].package_traits}, this package's trait value: {best_trait_count[0].pack_trait_value}\n")
+  print("arranging by highest pack trait value...")
+  best_value = arrange_by_highest_pack_trait_value(package_list_arrange)
+  print(f"Best trait value package: ({best_value[0].pack_trait_count}){best_value[0].package_traits}, this package's trait value: {best_value[0].pack_trait_value}\n")
+  #using index positions of packs in both best price and best traits to generate a "value" score for arranging packs by best overall
+  idx_dict = {}
+  print("Getting trait index...")
+  for trait_pack in best_trait_count:
+    trait_idx = best_trait_count.index(trait_pack)
+    for value_pack in best_value:
+      if value_pack == trait_pack:
+        value_idx = best_value.index(value_pack)
+    idx_key = trait_idx + value_idx
+    if idx_key in idx_dict:
+      while idx_key in idx_dict:
+        idx_key += 1
+    idx_dict[idx_key] = trait_pack
+  #rearranging package list by overall best packages
+  num_packs = len(package_list_arrange)
+  best_packs = []
+  print("Rearranging packs by best...")
+  while len(best_packs) != num_packs:
+    min_idx = min(idx_dict)
+    best_packs.append(idx_dict[min_idx])
+    idx_dict.pop(min_idx)
+  print("Rearranging finished!")
+  return best_packs
+
+
+###Performance enhancers, cuts less desireable itmes to improve speed-----------------------------------------------------------------------------------------------------------------------------
+#shrinks list of packages if length specified, used to prevent performance/freezing issues caused by too many possibilities
+def shrink_to_specific(list_to_shrink, shrink_to_num):
+  if len(list_to_shrink) > shrink_to_num:
+    cut_by = (len(list_to_shrink) - shrink_to_num)
+    arranged_price_list = arrange_by_price(list_to_shrink)
+    shrunk_list = arranged_price_list[cut_by:]
+    return shrunk_list
+  else:
+    return list_to_shrink
+
+
 #cuts out packs that are less than 75% of the budget
 def within_75_percent_budget(package_list_to_cut):
   within_75_packages = []
@@ -767,26 +779,25 @@ def within_75_percent_budget(package_list_to_cut):
   else:
     return within_75_packages
 
+###formated return of best results-------------------------------------------------------------------------------------------------------------------------------------------------------------
+#Prints best 3 packages
+def top_3_return(best_packs):
+  if len(best_packs) >= 3:
+    top_overall_packs = best_packs[:3]
+  else:
+    top_overall_packs = best_packs
 
-#Removes near idential packs (such as when packs are same price and have all the same traits due to sibling snakes with identical traits)
-def remove_doppelganger_packs(package_list_to_cut):
-  copy_list_to_cut = package_list_to_cut[:]
-  cut_list = []
-  for pack in copy_list_to_cut:
-    cut_list.append(pack)
-    copy_list_to_cut.remove(pack)
-    for other_pack in copy_list_to_cut:
-      if pack.price == other_pack.price:
-        if len(pack.package_traits) == len(other_pack.package_traits):
-          traits_match = True
-          for trait in pack.package_traits:
-            if trait not in other_pack.package_traits:
-              traits_match = False
-        if traits_match == True:
-          copy_list_to_cut.remove(other_pack)
-  return cut_list
-
-              
+  print("\n----------------------------")
+  print(f"Top {len(top_overall_packs)} Best Overall Packages:")
+  print("----------------------------\n")
+  count = 1
+  for pack in top_overall_packs:
+    print(f"Pack {count}: Price: ${pack.price}0   Number of Unique Traits: {len(pack.package_traits)}")
+    count += 1
+    for snake in pack.snakes:
+      print(f"        {snake['Animal_Id*']}: {snake['Title*']}   Price: ${snake['Price']}0")
+    print()
+     
 
 
 get_shop_stock()
@@ -832,34 +843,6 @@ else:
   just_females = find_balanced_combos(package_order['budget'], possible_female_combos, package_order['pack_traits'])
   by_best_pack = arrange_by_best_overall_package(just_females)
 
-#reducing to top 3 packages
-if len(by_best_pack) >= 3:
-  top_overall_packs = by_best_pack[:3]
-else:
-  top_overall_packs = by_best_pack
+top_3_return(by_best_pack)
 
 
-print("\n----------------------------")
-print(f"Top {len(top_overall_packs)} Best Overall Packages:")
-print("----------------------------\n")
-count = 1
-for pack in top_overall_packs:
-  print(f"Pack {count}: Price: ${pack.price}0   Number of Unique Traits: {len(pack.package_traits)}")
-  count += 1
-  for snake in pack.snakes:
-    print(f"        {snake['Animal_Id*']}: {snake['Title*']}   Price: ${snake['Price']}0")
-  print()
-
-
-
-
-  #return (up to) top 3 lists:
-    #overall best package
-    #lowest price package
-    #highest trait count package
-  #user selects which package they want, prints out all the snakes that make up that package (in a nice format)
-
-
-  #need to add:
-  #auto-complete/correct in the case the user enters traits that do not match list
-    #goes through letter by letter to give user options that they might have meant
