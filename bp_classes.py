@@ -8,7 +8,6 @@ class BP_Group:
 
 
   def build_bp_group(self, snake_list):
-    print("Building snake group...")
     for snake in snake_list:
       if snake not in self.snakes:
         self.snakes.append(snake)
@@ -18,22 +17,18 @@ class BP_Group:
       for trait in snake.traits:
         if trait not in self.group_traits:
           self.group_traits.append(trait)
-    print(f"Group complete, ${self.price}, group trait value = {self.group_trait_value}")
 
 
   def combine_bp_groups(self, group1, group2):
-    print("Combining groups...")
     self.price = group1.price + group2.price
     self.group_trait_value = group1.group_trait_value + group2.group_trait_value
     #adding the two snake lists into the package list
     self.snakes = group1.snakes[:] + group2.snakes[:]
-    print(f"Groups combined, {len(self.snakes)} snakes in combined group. Now combining traits...")
     #adding traits to packate_traits if they are not already in the list
     self.group_traits = group1.group_traits[:]
     for trait in group2.group_traits:
       if trait not in self.group_traits:
         self.group_traits.append(trait)
-    print(f"Traits combined, {len(self.group_traits)} traits, group trait value = {self.group_trait_value}")
 
 
 

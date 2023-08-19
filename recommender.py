@@ -1,17 +1,15 @@
 import json
 import itertools
-from max_heap import MaxHeap 
 from bp_classes import *
 
 #recessive traits start with 'r_', codominante with 'c_'
-# trait_type_dict = {'r_visual':['lavender', 'piebald', 'clown', 'hypo'], 'r_100_het':['het lavender', 'het piebald', 'het clown', 'het hypo'], 'r_50_66_het':['50% het lavender', '50% het piebald', '50% het clown', '50% het hypo', '66% het lavender', '66% het piebald', '66% het clown', '66% het hypo'], 'r_pos_het':['pos het lavender', 'pos het piebald', 'pos het clown', 'pos het hypo'], 'c_single':[], 'c_super':[], 'non-genetic':['paradox'], 'defect':['pet only']}
 trait_type_dict = {'r_visual':['lavender', 'piebald', 'clown', 'hypo'], 'r_100_het':[], 'r_50_66_het':[], 'r_pos_het':[], 'c_single':[], 'c_super':[], 'non-genetic':['paradox'], 'defect':['pet only']}
 #list for all snakes in stock
 snakes = []
 #list for all traits in stock
 trait_stock = {}
 
-group_order = {'budget':None, 'discount':None, 'females':0, 'males':0, 'must_have_traits':None, 'must_one_of_traits':None, 'pack_traits':None, 'ex_traits':None}
+group_order = {'budget':None, 'discount':None, 'females':0, 'males':0, 'must_have_traits':None, 'must_one_of_traits':None, 'group_traits':None, 'ex_traits':None}
 
 ###Setup functions-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #pulls relevant data from json file, converts to desired format in 'snakes' list (each index is a dictionary of individual snake)
@@ -19,7 +17,6 @@ def get_shop_stock():
   #convert to read and write to shop_data file, each snake on it's own line
   with open('animals_2.json') as raw_data:
     shop_data = json.load(raw_data) #type is list, indicies are dictionaries
-    # print(shop_data)
     for snake_data in shop_data:
       if snake_data["State"] == "For Sale":
         snake_info = Snake(title=snake_data['Title*'], snake_id=snake_data['Animal_Id*'], price=snake_data['Price'], sex=snake_data['Sex'], traits={})
@@ -34,7 +31,6 @@ def get_shop_stock():
         names_of_traits = ""
         for trait in snake_info.traits:
           names_of_traits += trait + ", "
-        print(names_of_traits)
         #updating snake_trait_value after getting value from traits
         snake_info.get_snake_trait_value()
         #adding snake to stock
@@ -88,7 +84,6 @@ def convert_snake_traits_to_list(snake_traits_data):
     else:
       traits_list.append(traits_split[count])
     count += 1
-  print(traits_list)
   return traits_list
 
 
@@ -176,9 +171,9 @@ def adjust_price_discount(snake_list):
   if order_group_size == 1:
     pass
   else:
-    pack_discount = discounts[order_group_size]
+    group_discount = discounts[order_group_size]
     for snake in snake_list:
-      discount = snake.price/pack_discount
+      discount = snake.price/group_discount
       snake.price -= discount
 
 
@@ -269,11 +264,11 @@ def take_order():
       break
   print()
   #getting traits that should be in the group but not every animal needs to have
-  in_the_pack_traits = []
-  while group_order['pack_traits'] == None:
+  in_the_group_traits = []
+  while group_order['group_traits'] == None:
     include_traits = input("3. Traits that MUST be included in the group, but not every snake needs to have, such as 'at least one pastel and one yellow belly'.\nIf any, type them below seperated by '/' (Example: 'pastel/enchi/yellow belly'), else hit [ENTER].\n")
     if include_traits != "":
-      add_traits_to_order(include_traits, 'pack_traits', in_the_pack_traits)
+      add_traits_to_order(include_traits, 'group_traits', in_the_group_traits)
     else:
       break
   print()
@@ -452,7 +447,7 @@ def cut_by_price(list_to_cut):
 
     if len(males_in_budget) + len(females_in_budget) < group_order['males'] + group_order['females']:
       group_possible = False
-      print("Cannot make a package within budget with both males and females.")
+      print("Cannot make a groupage within budget with both males and females.")
         
   if group_possible == True:
     return males_in_budget, females_in_budget, min_males_price, min_females_price
@@ -528,71 +523,71 @@ def cut_snakes():
     return None
 
 
-#only keeps packs with reasonably balanced snake prices, to avoid extreem value differences within packs (ex. $2000 and $50 snakes in same group)
-def balanced_snake_price_packs_only(group_list_to_cut):
-  balanced_packs = []
+#only keeps groups with reasonably balanced snake prices, to avoid extreem value differences within groups (ex. $2000 and $50 snakes in same group)
+def balanced_snake_price_groups_only(group_list_to_cut):
+  balanced_groups = []
   try:
-    for pack in group_list_to_cut:
-      min_reasonable_price = pack.price // ((len(pack.snakes) - 1) * 10)
-      pack_balanced = True
-      for snake in pack.snakes:
+    for group in group_list_to_cut:
+      min_reasonable_price = group.price // ((len(group.snakes) - 1) * 10)
+      group_balanced = True
+      for snake in group.snakes:
         if snake['Price'] < min_reasonable_price:
-          pack_balanced = False
-      if pack_balanced == True:
-        balanced_packs.append(pack)
-    if len(balanced_packs) > 1:
-      return balanced_packs
+          group_balanced = False
+      if group_balanced == True:
+        balanced_groups.append(group)
+    if len(balanced_groups) > 1:
+      return balanced_groups
     else:
       return group_list_to_cut
   except:
     return group_list_to_cut
 
 
-#Removes near idential packs (such as when packs are same price and have all the same traits due to sibling snakes with identical traits)
-def remove_doppelganger_packs(group_list_to_cut):
+#Removes near idential groups (such as when groups are same price and have all the same traits due to sibling snakes with identical traits)
+def remove_doppelganger_groups(group_list_to_cut):
   copy_list_to_cut = group_list_to_cut[:]
   cut_list = []
-  for pack in copy_list_to_cut:
-    cut_list.append(pack)
-    copy_list_to_cut.remove(pack)
-    for other_pack in copy_list_to_cut:
-      if pack.price == other_pack.price and pack.group_trait_value == other_pack.group_trait_value:
-        if len(pack.group_traits) == len(other_pack.group_traits):
+  for group in copy_list_to_cut:
+    cut_list.append(group)
+    copy_list_to_cut.remove(group)
+    for other_group in copy_list_to_cut:
+      if group.price == other_group.price and group.group_trait_value == other_group.group_trait_value:
+        if len(group.group_traits) == len(other_group.group_traits):
           traits_match = True
-          for trait in pack.group_traits:
-            if trait not in other_pack.group_traits:
+          for trait in group.group_traits:
+            if trait not in other_group.group_traits:
               traits_match = False
           if traits_match == True:
-            copy_list_to_cut.remove(other_pack)
+            copy_list_to_cut.remove(other_group)
   return cut_list
 
          
 ###group making functions------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#finding all combos that fit count and budget constraits, converting each combo to a Ball_Python_group: functions 'balanced_snake_price_packs_only' and 'remove_doppelganger' used to cut out less desirable and near duplicate packs
-def find_combos_lists_to_packs(snake_list, num_snakes, budget_cap):
+#finding all combos that fit count and budget constraits, converting each combo to a Ball_Python_group: functions 'balanced_snake_price_groups_only' and 'remove_doppelganger' used to cut out less desirable and near duplicate groups
+def find_combos_lists_to_groups(snake_list, num_snakes, budget_cap):
   all_combos = []
   pos_combos = itertools.combinations(snake_list, num_snakes)
   list_combos = list(pos_combos)
   print(f"Found {len(list_combos)} combos. Removing combos outside of budget...")
   for combo in list_combos:
-    combo_pack = BP_Group(price=0, group_trait_value=0, snakes=[], group_traits=[])
-    combo_pack.build_bp_group(combo)
-    if combo_pack.price <= budget_cap:  
-      all_combos.append(combo_pack)
+    combo_group = BP_Group(price=0, group_trait_value=0, snakes=[], group_traits=[])
+    combo_group.build_bp_group(combo)
+    if combo_group.price <= budget_cap:  
+      all_combos.append(combo_group)
   print(f"Complete, {len(all_combos)} combos inside budget. Removing unbalanced combos...")
-  balanced_combos = balanced_snake_price_packs_only(all_combos)
+  balanced_combos = balanced_snake_price_groups_only(all_combos)
   print(f"Complete, {len(balanced_combos)} combos.  Removing doppelganger combos...")
-  unique_combos = remove_doppelganger_packs(balanced_combos)
+  unique_combos = remove_doppelganger_groups(balanced_combos)
   print(f"Complete, {len(unique_combos)} combos remainging")
   return unique_combos
 
 
-#combines the male/female groups and returns a list of the groups that fit the budget and trait requirements: functions 'shrink_to_specific', 'balanced_snake_price_packs_only' and 'within_75_percent_budget' built in to cut out groups that are less than ideal
-def find_balanced_combos(budget, combo_packs1, combo_packs2=None, include_in_group_traits = None):
-  all_pack_combos = []
-  shrunk_combos1 = shrink_to_specific(combo_packs1, 250)
-  if combo_packs2 != None:
-    shrunk_combos2 = shrink_to_specific(combo_packs2, 250)
+#combines the male/female groups and returns a list of the groups that fit the budget and trait requirements: functions 'shrink_to_specific', 'balanced_snake_price_groups_only' and 'within_75_percent_budget' built in to cut out groups that are less than ideal
+def find_balanced_combos(budget, combo_groups1, combo_groups2=None, include_in_group_traits = None):
+  all_group_combos = []
+  shrunk_combos1 = shrink_to_specific(combo_groups1, 250)
+  if combo_groups2 != None:
+    shrunk_combos2 = shrink_to_specific(combo_groups2, 250)
     for combo1 in shrunk_combos1:
       for combo2 in shrunk_combos2:
         mf_combo_price = combo1.price + combo2.price
@@ -605,9 +600,9 @@ def find_balanced_combos(budget, combo_packs1, combo_packs2=None, include_in_gro
               if trait in combo.group_traits:
                 traits_count +=1
             if traits_count == len(include_in_group_traits):
-              all_pack_combos.append(combo)
+              all_group_combos.append(combo)
           else:
-            all_pack_combos.append(combo)
+            all_group_combos.append(combo)
   else:
     for combo1 in shrunk_combos1:
       if include_in_group_traits != None:
@@ -616,98 +611,48 @@ def find_balanced_combos(budget, combo_packs1, combo_packs2=None, include_in_gro
           if trait in combo1.group_traits:
             traits_count +=1
         if traits_count == len(include_in_group_traits):
-          all_pack_combos.append(combo1)
+          all_group_combos.append(combo1)
       else:
-        all_pack_combos.append(combo1)
-  balanced_combos = balanced_snake_price_packs_only(all_pack_combos)
+        all_group_combos.append(combo1)
+  balanced_combos = balanced_snake_price_groups_only(all_group_combos)
   balanced_combos_75 = within_75_percent_budget(balanced_combos)
   balanced_combos_final = shrink_to_specific(balanced_combos_75, 50)
   return balanced_combos_final
 
 
 ###arragement functions for identifying best groups-----------------------------------------------------------------------------------------------------------------------------------------------
-#arranges list of groups by most to least pack traits
-# def arrange_by_most_pack_traits(group_list_arrange):
-#   copy_list_to_arrange = group_list_arrange[:]
-#   num_packs = len(copy_list_to_arrange)
-#   max_packs = []
-#   while len(max_packs) != num_packs:
-#     max_traits = 0
-#     for pack in copy_list_to_arrange:
-#       if len(pack.group_traits) > max_traits:
-#         max_traits = len(pack.group_traits)
-#     for pack in copy_list_to_arrange:
-#       if len(pack.group_traits) == max_traits:
-#         max_packs.append(pack)
-#         copy_list_to_arrange.remove(pack)
-#   return max_packs
-
-
 #arranges list of groups by overall value of included traits in each group
 def arrange_by_highest_group_trait_value(group_list_arrange):
   copy_list_to_arrange = group_list_arrange[:]
-  num_packs = len(copy_list_to_arrange)
-  max_value_packs = []
-  while len(max_value_packs) != num_packs:
+  num_groups = len(copy_list_to_arrange)
+  max_value_groups = []
+  while len(max_value_groups) != num_groups:
     max_value = 0
-    for pack in copy_list_to_arrange:
-      if pack.group_trait_value > max_value:
-        max_value = pack.group_trait_value
-    for pack in copy_list_to_arrange:
-      if pack.group_trait_value == max_value:
-        max_value_packs.append(pack)
-        copy_list_to_arrange.remove(pack)
-  return max_value_packs
+    for group in copy_list_to_arrange:
+      if group.group_trait_value > max_value:
+        max_value = group.group_trait_value
+    for group in copy_list_to_arrange:
+      if group.group_trait_value == max_value:
+        max_value_groups.append(group)
+        copy_list_to_arrange.remove(group)
+  return max_value_groups
 
 
 #arranges list of groups by lowest to highest price (used in 'shrink_to_specific' function in the case of too many possible options)
 def arrange_by_price(group_list_arrange):
   copy_list_to_arrange = group_list_arrange[:]
-  num_packs = len(copy_list_to_arrange)
-  cheap_packs = []
-  while len(cheap_packs) != num_packs:
+  num_groups = len(copy_list_to_arrange)
+  cheap_groups = []
+  while len(cheap_groups) != num_groups:
     price_min = copy_list_to_arrange[0].price
-    for pack in copy_list_to_arrange:
-      if pack.price < price_min:
-        price_min = pack.price
-    for pack in copy_list_to_arrange:
-      if pack.price == price_min:
-        cheap_packs.append(pack)
-        copy_list_to_arrange.remove(pack)
-  return cheap_packs
-
-
-#arranges list of groups by best overall, taking into account trait count and trait value
-# def arrange_by_best_overall_group(group_list_arrange):
-#   print("arranging by most pack traits...")
-#   best_trait_count = arrange_by_most_pack_traits(group_list_arrange)
-#   print(f"Best trait count group: ({best_trait_count[0].pack_trait_count}){best_trait_count[0].group_traits}, this group's trait value: {best_trait_count[0].group_trait_value}\n")
-#   print("arranging by highest pack trait value...")
-#   best_value = arrange_by_highest_group_trait_value(group_list_arrange)
-#   print(f"Best trait value group: ({best_value[0].pack_trait_count}){best_value[0].group_traits}, this group's trait value: {best_value[0].group_trait_value}\n")
-#   #using index positions of packs in both best price and best traits to generate a "value" score for arranging packs by best overall
-#   idx_dict = {}
-#   print("Getting trait index...")
-#   for trait_pack in best_trait_count:
-#     trait_idx = best_trait_count.index(trait_pack)
-#     for value_pack in best_value:
-#       if value_pack == trait_pack:
-#         value_idx = best_value.index(value_pack)
-#     idx_key = trait_idx + value_idx
-#     if idx_key in idx_dict:
-#       while idx_key in idx_dict:
-#         idx_key += 1
-#     idx_dict[idx_key] = trait_pack
-#   #rearranging group list by overall best groups
-#   num_packs = len(group_list_arrange)
-#   best_packs = []
-#   print("Rearranging packs by best...")
-#   while len(best_packs) != num_packs:
-#     min_idx = min(idx_dict)
-#     best_packs.append(idx_dict[min_idx])
-#     idx_dict.pop(min_idx)
-#   print("Rearranging finished!")
-#   return best_packs
+    for group in copy_list_to_arrange:
+      if group.price < price_min:
+        price_min = group.price
+    for group in copy_list_to_arrange:
+      if group.price == price_min:
+        cheap_groups.append(group)
+        copy_list_to_arrange.remove(group)
+  return cheap_groups
 
 
 ###Performance enhancers, cuts less desireable items to improve speed-----------------------------------------------------------------------------------------------------------------------------
@@ -725,12 +670,12 @@ def shrink_to_specific(list_to_shrink, shrink_to_num):
     return list_to_shrink
 
 
-#cuts out packs that are less than 75% of the budget
+#cuts out groups that are less than 75% of the budget
 def within_75_percent_budget(group_list_to_cut):
   within_75_groups = []
-  for pack in group_list_to_cut:
-    if pack.price >= int(group_order['budget'] * 0.75):
-      within_75_groups.append(pack)
+  for group in group_list_to_cut:
+    if group.price >= int(group_order['budget'] * 0.75):
+      within_75_groups.append(group)
   if len(within_75_groups) < 5:
     return group_list_to_cut
   else:
@@ -739,21 +684,40 @@ def within_75_percent_budget(group_list_to_cut):
 
 ###formated return of best results-------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Prints best 3 groups
-def top_3_return(best_packs):
-  if len(best_packs) >= 3:
-    top_overall_packs = best_packs[:3]
+def top_3_return(best_groups):
+  if len(best_groups) >= 3:
+    top_overall_groups = best_groups[:3]
   else:
-    top_overall_packs = best_packs
+    top_overall_groups = best_groups
+
+  max_len_id = 0
+  max_len_title = 0
+  for group in top_overall_groups:
+    for snake in group.snakes:
+      if len(snake.snake_id) > max_len_id:
+        max_len_id = len(snake.snake_id)
+      if len(snake.title) > max_len_title:
+        max_len_title = len(snake.title)
+  for group in top_overall_groups:
+    for snake in group.snakes:
+      if len(snake.snake_id) < max_len_id:
+        add_len = max_len_id - len(snake.snake_id)
+        snake.snake_id += " " * add_len
+      if len(snake.title) < max_len_title:
+        add_len = max_len_title - len(snake.title)
+        snake.title += " " * add_len
+
 
   print("\n----------------------------")
-  print(f"Top {len(top_overall_packs)} Best Overall groups:")
+  print(f"Top {len(top_overall_groups)} Best Overall Groups:")
   print("----------------------------\n")
+  gap = " " * 10
   count = 1
-  for pack in top_overall_packs:
-    print(f"Pack {count}: Price: ${pack.price:.2f}")
+  for group in top_overall_groups:
+    print(f"[Group {count}: ${group.price:.2f}]")
     count += 1
-    for snake in pack.snakes:
-      print(f"        {snake.snake_id}: {snake.title}   Price: ${snake.price:.2f}")
+    for snake in group.snakes:
+      print(f" {snake.snake_id}  {snake.title}  Price: ${snake.price:.2f}")
     print()
      
 
@@ -770,40 +734,40 @@ while possible_snakes == None:
   possible_snakes = cut_snakes()
   if possible_snakes == None:
     # in the case that the order is impossible to fill, resets group_order so no traits left in lists from previous attempt, also reset snakes so price discount does not carry over from previous attempt
-    group_order = {'budget':None, "num_snakes":0, "discount":None, 'females':0, 'males':0, 'must_have_traits':None, 'must_have_traits':None, "pack_traits":None, 'ex_traits':None, 'trait_count':None}
+    group_order = {'budget':None, "num_snakes":0, "discount":None, 'females':0, 'males':0, 'must_have_traits':None, 'must_have_traits':None, "group_traits":None, 'ex_traits':None, 'trait_count':None}
     snakes = copy_snake_list
     print("Let's try again. Are there any requirements you could lower or do without?\n")
 possible_males = possible_snakes[0]
 possible_females = possible_snakes[1]
-min_male_pack_price = possible_snakes[2]
-min_female_pack_price = possible_snakes[3]
+min_male_group_price = possible_snakes[2]
+min_female_group_price = possible_snakes[3]
 
 #getting possible groups for males and/or females based on group order
 if group_order['males'] > 0:
-  possible_male_combos = find_combos_lists_to_packs(possible_males, group_order['males'], (group_order['budget']-min_female_pack_price))
+  possible_male_combos = find_combos_lists_to_groups(possible_males, group_order['males'], (group_order['budget']-min_female_group_price))
   print(f"Found {len(possible_male_combos)} possible male combos.")
 if group_order['females'] > 0:
-  possible_female_combos = find_combos_lists_to_packs(possible_females, group_order['females'],(group_order['budget']-min_male_pack_price))
+  possible_female_combos = find_combos_lists_to_groups(possible_females, group_order['females'],(group_order['budget']-min_male_group_price))
   print(f"Found {len(possible_female_combos)} possible female combs.")
 
 #calculating final groups for orders that contain both males and females
 if group_order['males'] > 0 and group_order['females'] > 0:
   print("Combining male and female combos...")
-  possible_male_and_female_combos = find_balanced_combos(group_order['budget'], possible_male_combos, possible_female_combos, group_order['pack_traits'])
+  possible_male_and_female_combos = find_balanced_combos(group_order['budget'], possible_male_combos, possible_female_combos, group_order['group_traits'])
   print(f"{len(possible_male_and_female_combos)} possible male/female combos")
-  # by_best_pack = arrange_by_best_overall_group(possible_male_and_female_combos)
-  by_best_pack = arrange_by_highest_group_trait_value(possible_male_and_female_combos)
+  # by_best_group = arrange_by_best_overall_group(possible_male_and_female_combos)
+  by_best_group = arrange_by_highest_group_trait_value(possible_male_and_female_combos)
 #calculating final groups for orders that contain only males
 elif group_order['males'] > 0:
   print("\nFinding best overall male groups...")
-  just_males = find_balanced_combos(group_order['budget'], possible_male_combos, group_order['pack_traits'])
-  # by_best_pack = arrange_by_best_overall_group(just_males)
-  by_best_pack = arrange_by_highest_group_trait_value(just_males)
+  just_males = find_balanced_combos(group_order['budget'], possible_male_combos, group_order['group_traits'])
+  # by_best_group = arrange_by_best_overall_group(just_males)
+  by_best_group = arrange_by_highest_group_trait_value(just_males)
 #calculating final groups for orders that contain only females
 else:
   print("\nFinding best overall female groups...")
-  just_females = find_balanced_combos(group_order['budget'], possible_female_combos, group_order['pack_traits'])
-  # by_best_pack = arrange_by_best_overall_group(just_females)
-  by_best_pack = arrange_by_highest_group_trait_value(just_females)
+  just_females = find_balanced_combos(group_order['budget'], possible_female_combos, group_order['group_traits'])
+  # by_best_group = arrange_by_best_overall_group(just_females)
+  by_best_group = arrange_by_highest_group_trait_value(just_females)
 
-top_3_return(by_best_pack)
+top_3_return(by_best_group)
