@@ -1,17 +1,17 @@
 import json
 import itertools
 from max_heap import MaxHeap 
-from bp_package_class import *
+from bp_classes import *
 
+#recessive traits start with 'r_', codominante with 'c_'
+# trait_type_dict = {'r_visual':['lavender', 'piebald', 'clown', 'hypo'], 'r_100_het':['het lavender', 'het piebald', 'het clown', 'het hypo'], 'r_50_66_het':['50% het lavender', '50% het piebald', '50% het clown', '50% het hypo', '66% het lavender', '66% het piebald', '66% het clown', '66% het hypo'], 'r_pos_het':['pos het lavender', 'pos het piebald', 'pos het clown', 'pos het hypo'], 'c_single':[], 'c_super':[], 'non-genetic':['paradox'], 'defect':['pet only']}
+trait_type_dict = {'r_visual':['lavender', 'piebald', 'clown', 'hypo'], 'r_100_het':[], 'r_50_66_het':[], 'r_pos_het':[], 'c_single':[], 'c_super':[], 'non-genetic':['paradox'], 'defect':['pet only']}
+#list for all snakes in stock
 snakes = []
-trait_stock = []
-discounts = {1:None, 2:10, 3:15, 4:20}
-for i in range(5,10):
-  discounts[i] = 25
-for i in range(10,100):
-  discounts[i] = 30
+#list for all traits in stock
+trait_stock = {}
 
-package_order = {"budget":None, "num_snakes":0, "discount":None, "females":0, "males":0, "all_snakes_traits":None, "one_of_traits":None, "pack_traits":None, "ex_traits":None, "trait_count":None}
+group_order = {'budget':None, 'discount':None, 'females':0, 'males':0, 'must_have_traits':None, 'must_one_of_traits':None, 'pack_traits':None, 'ex_traits':None}
 
 ###Setup functions-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #pulls relevant data from json file, converts to desired format in 'snakes' list (each index is a dictionary of individual snake)
@@ -22,121 +22,125 @@ def get_shop_stock():
     # print(shop_data)
     for snake_data in shop_data:
       if snake_data["State"] == "For Sale":
-        snake_info = {'Title*':'', 'Animal_Id*':'', 'Maturity*':'', 'Price':'', 'Sex':'', 'Traits':[], 'Prey_State':'', 'Prey_Food':''}
-        
-        #converting traits string value to list of traits
-        for key in snake_info:
-          if key == "Traits":
-            traits_split = snake_data[key].split(" ")
-            traits_list = []
-            trait_count = len(traits_split)
-            count = 0
-            while count < trait_count:
-              #joining percents with hets  and their corresponding trait in single string
-              if traits_split[count] == "50%" or traits_split[count] == "66%" or traits_split[count] == "pos":
-                trait = traits_split[count] + " " + traits_split[count+1] + " " + traits_split[count+2]
-                #skipping "albino" in the case of finding lavender, lavender is assumed albino
-                if traits_split[count+2] == "lavender":
-                  count +=1
-                count += 2
-                traits_list.append(trait)
-                if count >= len(traits_split):
-                  break
-
-              #joining 100% hets with corresponding trait in single string  
-              elif traits_split[count] == "het":
-                trait = traits_split[count] + " " + traits_split[count+1]
-                #skipping "albino" in the case of finding lavender, lavender is assumed albino
-                if traits_split[count+1] == "lavender":
-                  count +=1
-                count += 1
-                traits_list.append(trait)
-                if count >= len(traits_split):
-                  break
-                
-              #checking if visible trait is two words, if so joining into single string before appending list  
-              elif traits_split[count] == "black" or traits_split[count] == "yellow" or traits_split[count] == "pet":
-                trait = traits_split[count] + " " + traits_split[count+1]
-                traits_list.append(trait)
-                #skipping 2nd half of two word trait in next loop through traits_split
-                count += 1
-                if count >= len(traits_split):
-                  break
-              
-              #skipping "albino" in the case of finding lavender, lavender is assumed albino
-              elif traits_split[count] == "lavender":
-                traits_list.append(traits_split[count])
-                count += 1
-                if count >= len(traits_split):
-                  break
-
-              
-              #adding all single word visible traits to list  
-              else:
-                traits_list.append(traits_split[count])
-              count += 1
-
-            snake_info["Traits"] = traits_list
-
-          else:
-          #copying relevant info from json file for each snake and putting it in list
-            snake_info[key] = snake_data[key]
-        
+        snake_info = Snake(title=snake_data['Title*'], snake_id=snake_data['Animal_Id*'], price=snake_data['Price'], sex=snake_data['Sex'], traits={})
+        #building trait information and adding to snake_info
+        traits_list = convert_snake_traits_to_list(snake_data['Traits'])
+        for trait in traits_list:
+          t = Trait(trait_name=trait)
+          t.update_trait_type_and_value(trait_type_dict)
+          snake_info.traits[t.trait_name] = t
+          if t.trait_name not in trait_stock:
+            trait_stock[t.trait_name] = t
+        names_of_traits = ""
+        for trait in snake_info.traits:
+          names_of_traits += trait + ", "
+        print(names_of_traits)
+        #updating snake_trait_value after getting value from traits
+        snake_info.get_snake_trait_value()
+        #adding snake to stock
         snakes.append(snake_info)
   return snakes
     
 
-#compiles a list of in stock traits the user can select from if looking for specific traits
-def in_stock_traits():
-  for snake in snakes:
-    for trait in snake["Traits"]:
-      if trait not in trait_stock:
-        trait_stock.append(trait)
-  trait_stock.sort()
-  return trait_stock
+#formats snake traits pulled from json file, used in 'get_shop_stock' function
+def convert_snake_traits_to_list(snake_traits_data):
+  traits_split = snake_traits_data.split(' ')
+  traits_list = []
+  trait_count = len(traits_split)
+  count = 0
+  while count < trait_count:
+    #joining percents with hets  and their corresponding trait in single string
+    if traits_split[count] == "50%" or traits_split[count] == "66%" or traits_split[count] == "pos":
+      trait = traits_split[count] + " " + traits_split[count+1] + " " + traits_split[count+2]
+
+      #skipping "albino" in the case of finding lavender, lavender is assumed albino
+      if traits_split[count+2] == "lavender":
+        count +=1
+      count += 2
+      traits_list.append(trait)
+      if count >= len(traits_split):
+        break
+    #joining 100% hets with corresponding trait in single string  
+    elif traits_split[count] == "het":
+      trait = traits_split[count] + " " + traits_split[count+1]
+      #skipping "albino" in the case of finding lavender, lavender is assumed albino
+      if traits_split[count+1] == "lavender":
+        count +=1
+      count += 1
+      traits_list.append(trait)
+      if count >= len(traits_split):
+        break
+    #checking if visible trait is two words, if so joining into single string before appending list  
+    elif traits_split[count] == "black" or traits_split[count] == "yellow" or traits_split[count] == "pet":
+      trait = traits_split[count] + " " + traits_split[count+1]
+      traits_list.append(trait)
+      #skipping 2nd half of two word trait in next loop through traits_split
+      count += 1
+      if count >= len(traits_split):
+        break
+    #skipping "albino" in the case of finding lavender, lavender is assumed albino
+    elif traits_split[count] == "lavender":
+      traits_list.append(traits_split[count])
+      count += 1
+      if count >= len(traits_split):
+        break
+    #adding all single word visible traits to list  
+    else:
+      traits_list.append(traits_split[count])
+    count += 1
+  print(traits_list)
+  return traits_list
 
 
 #categorizes and prints in stock traits for user
 def categorized_in_stock_traits():
-  formatted_traits = []
-  recessive_traits = []
-  codominant_traits = []
-  #standardizing trait string length for printing
+  copy_trait_stock = trait_stock.copy()
+  #getting max length of traits for standardizing collumns for printing
   len_trait_block = 0
-  for trait in trait_stock:
+  for trait in copy_trait_stock:
     if len(trait) > len_trait_block:
       len_trait_block = len(trait)
-  for trait in trait_stock:
+  
+  #recessive traits
+  r_vis_t , r_100_t , r_50_66_t , r_pos_t = [] , [] , [] , []
+  #codominant traits
+  c_sing , c_sup = [] , []
+  #everthing else
+  other_traits = []
+  #putting traits in catagory lists
+  for trait in copy_trait_stock:
+    if copy_trait_stock[trait].trait_type == 'r_visual':
+      cat_list = r_vis_t
+    elif copy_trait_stock[trait].trait_type == 'r_100_het':
+      cat_list = r_100_t
+    elif copy_trait_stock[trait].trait_type == 'r_50_66_het':
+      cat_list = r_50_66_t
+    elif copy_trait_stock[trait].trait_type == 'r_pos_het':
+      cat_list = r_pos_t 
+    elif copy_trait_stock[trait].trait_type == 'c_super':
+      cat_list = c_sup
+    elif copy_trait_stock[trait].trait_type == 'c_single':
+      cat_list = c_sing
+    else:
+      cat_list = other_traits
+    #adjusting the trait's string length for printing
     add_len = len_trait_block - len(trait)
     if add_len > 0:
-      trait += (" " * add_len)
-      formatted_traits.append(trait)
+      trait_name_adjusted = trait + (" " * add_len)
+      cat_list.append(trait_name_adjusted)
     else:
-      formatted_traits.append(trait)
-  #separates recessive and codominant traits and puts recessive traits in a better order for display
-  for trait in formatted_traits:
-    if trait.find("lavender") >= 0 or trait.find("piebald") >= 0 or trait.find("clown") >= 0 or trait.find("hypo") >= 0:
-      recessive_traits.append(trait)
-    else:
-      codominant_traits.append(trait)
+      cat_list.append(trait)
+
   #rearranging recessive_traits so it lists them from highest to lowest value (visuals, followed by 100% hets, followed by 66%, followed by 50%, ending with pos hets)
-  reordering_recessives = []
-  for trait in recessive_traits:
-    if trait.find("het") == -1:
-      reordering_recessives.append(trait)
-  for trait in recessive_traits:
-    if trait.find("het") >= 0 and trait.find("%") == -1 and trait.find("pos") == -1:
-      reordering_recessives.append(trait)
-  for trait in recessive_traits:
-    if trait[0] == "6":
-      reordering_recessives.append(trait)
-  for trait in recessive_traits:
-    if trait[0] == "5":
-      reordering_recessives.append(trait)   
-  for trait in recessive_traits:
-    if trait not in reordering_recessives:
-      reordering_recessives.append(trait)
-  recessive_traits = reordering_recessives
+  r_vis_t.sort()
+  r_100_t.sort()
+  r_50_66_t.sort()
+  r_pos_t.sort()
+  recessive_traits = r_vis_t + r_100_t + r_50_66_t + r_pos_t
+  #rearranging codominant traits so supers are placed at top, followed by single codominant traits
+  c_sup.sort()
+  c_sing.sort()
+  codominant_traits = c_sup + c_sing
   
   #adds blanks to shorter list to make both even to simplify printing even columns
   list_len_diff = max(len(recessive_traits), len(codominant_traits)) - min(len(recessive_traits), len(codominant_traits))
@@ -146,27 +150,46 @@ def categorized_in_stock_traits():
   elif len(recessive_traits) > len(codominant_traits):
     for num in range(list_len_diff):
       codominant_traits.append(" " * len_trait_block)
-  else:
-    pass
-       
+  add_to_other = len(recessive_traits) - len(other_traits)
+  for num in range(add_to_other):
+    other_traits.append(" ")
+
   #formats and prints the categorized traits
-  trait_col_header = "RECESSIVE TRAITS     CODOMINANT TRAITS\n"
+  trait_col_header = "\nRECESSIVE TRAITS     CODOMINANT TRAITS     OTHER\n"
   list_len_max = max(len(recessive_traits), len(codominant_traits))
   idx = 0
   for num in range(list_len_max):
-    trait_col_header += recessive_traits[idx] + "     " + codominant_traits[idx] + "\n"
+    trait_col_header += recessive_traits[idx] + "     " + codominant_traits[idx] + "     " + other_traits[idx] + "\n"
     idx += 1
   print(trait_col_header)
   
 
+#updates the price of each snake in list based on discount percent for group_order['num_snakes'], used in cut_by_price function before the cuts are made
+def adjust_price_discount(snake_list):
+  discounts = {2:15, 3:20, 4:25}
+  for i in range(5,10):
+    discounts[i] = 30
+  for i in range(10,100):
+    discounts[i] = 40
+
+  order_group_size = group_order['males'] + group_order['females']
+  if order_group_size == 1:
+    pass
+  else:
+    pack_discount = discounts[order_group_size]
+    for snake in snake_list:
+      discount = snake.price/pack_discount
+      snake.price -= discount
+
+
 #welcome measage, list of things it can do and provides user with list of in stock traits if desired
 def welcome_message():
-  welcome = """
+  print("""
 *******************************************************************************
 *****************  Welcome to the Ball Python Recommender!  *******************
 *******************************************************************************
 The purpose of this program is to aid BP breeders in putting together the best
-packages for customers based on their budget, desired traits, and number of
+groups for customers based on their budget, desired traits, and number of
 snakes in a time efficent manner.  This program by default is using an example
 inventory file from the Crescent Serpents MorphMarket shop (it is not current).
 
@@ -176,413 +199,340 @@ To use your own shop file:
 -Locate the downloadable json file for your shop (ctrl + f and type json).
 -Download the file into the 'Ball Python Recommender' folder as 'animals.json'
 -Give it a test!
-  """
-  print(welcome)
-  see_traits = input("Would you like to see a list of traits currently in stock? (Y/N) ")
-  print()
+  """)
+  see_traits = input("Would you like to see a list of traits currently in stock? (Y/[any key]) ")
   if len(see_traits) > 0 and see_traits.upper()[0] == "Y":
     categorized_in_stock_traits()
   print("\nLet's get started!")
 
 
-###function for getting requirements for package and preparing snake list for processing--------------------------------------------------------------------------------------------------------
-#Gets the parameters from user and puts them in the package_order dictionary
+###function for getting requirements for group and preparing snake list for processing--------------------------------------------------------------------------------------------------------
+#adds user input traits requirements to order if in stock/exist, used in take_order function
+def add_traits_to_order(user_input, order_trait_requirement, order_trait_list):
+  for trait in user_input.split('/'):
+    if trait.lower() in trait_stock and trait not in order_trait_list:
+      order_trait_list.append(trait)
+    elif trait.lower() in order_trait_list:
+      print(f"{trait} is already in the order.")
+    else:
+      print(f"Sorry, {trait} is not in stock.")
+  more_traits = input("Did you want to add any others (Y/[any key])? ")
+  if more_traits.upper() != 'Y':
+    group_order[order_trait_requirement] = order_trait_list
+
+
+#Gets the parameters from user and puts them in the group_order dictionary
 def take_order():
   #getting budget
-  budget_max = None
-  while budget_max == None:
-    budget = input("\nWhat is the maximum budget? (Minimum of $50) ")
+  prices = []
+  for snake in snakes:
+    prices.append(snake.price)
+  while type(group_order['budget']) != int:
     try:
-      budget = int(budget)
-      if (budget) >= 50:
-        budget_max = budget
+      budget = int(input(f"\nWhat is the maximum budget? (Minimum of ${min(prices)}0) "))
+      if (budget) >= min(prices):
+        group_order['budget'] = budget
       else:
         print("Sorry, the budget is too small.")
     except:
       print("Sorry, I didn't understand that. Make sure you're not using extra symbols or spaces.")
-  package_order["budget"] = budget_max
   print()
   
-  #getting number and sex of snakes for package.
-  while package_order['num_snakes'] == 0:
+  #getting number and sex of snakes for group.
+  while group_order['males'] == 0 and group_order['females'] == 0:
     try:
-      package_order['males'] = int(input(f"How many males? "))
+      group_order['males'] = int(input(f"How many males? "))
+      group_order['females'] = int(input(f"How many females? "))
     except:
-      print("Sorry, I didn't understand that. Make sure you're giving a number.")
-    try:
-      package_order['females'] = int(input(f"How many females? "))
-    except:
-      print("Sorry, I didn't understand that. Make sure you're giving a number.")
-    
-    if package_order['males'] == 0 and package_order['females'] == 0:
-      print("Sorry, I can't build a package out of 0 snakes...")
-    else:
-      package_order['num_snakes'] = package_order['males'] + package_order['females']
+      print("Sorry, I didn't understand that. Make sure you're giving a number.")  
+    if group_order['males'] == 0 and group_order['females'] == 0:
+      print("Sorry, I can't build a group out of 0 snakes...")
   print()
 
-  print("Let's start picking traits. We're going to go through 3 options of traits to include and 1 option to exclude:\n")
-
+  print("Let's start picking traits. We're going to go through 4 options, 3 for traits to include and 1 for traits to exclude:\n")
   #getting traits all animals should have
   all_snakes_have_traits = []
-  while len(all_snakes_have_traits) == 0:
-    include_traits_all = input("1. Are there any traits that EVERY snake MUST to have? Such as 'every snake is piebald' (Y/N) ")
-    if include_traits_all.upper() == "Y":
-      more_traits = "Y"
-      while more_traits.upper() == "Y":
-        include_traits_all = input("Okay, which traits? (Example: 'lavender/yellow belly/clown') ")
-        for trait in include_traits_all.split("/"):
-          if trait in trait_stock and trait not in all_snakes_have_traits:
-            all_snakes_have_traits.append(trait)
-          else:
-            print(f"Sorry, {trait} is not in stock.")
-        more_traits = input("Were there any other traits all the snakes must have? (Y/N) ")
-      package_order["all_snakes_traits"] = all_snakes_have_traits
+  while group_order['must_have_traits'] == None:
+    include_traits = input("1. Traits EVERY snake MUST to have, such as 'every snake is piebald, if it's not piebald I don't want it'.\nIf any, type them below seperated by '/' (Example: 'lavender/piebald/mahogany'), else hit [ENTER].\n")
+    if include_traits != "":
+      add_traits_to_order(include_traits, 'must_have_traits', all_snakes_have_traits)
     else:
-      all_snakes_have_traits.append(None)
+      break
   print()
-
   #getting list of traits each animal should have at least one of from list
   at_least_one_traits = []
-  while len(at_least_one_traits)== 0:
-    include_traits_at_least_one = input("2. Are there any traits EVERY snake must have AT LEAST one of? Such as 'every snake is either lavender or het lavender' (Y/N) ")
-    if include_traits_at_least_one.upper() == "Y":
-      more_traits = "Y"
-      while more_traits.upper() == "Y":
-        include_traits_at_least_one = input("Okay, which trait(s)? (Example: 'lavender/het lavender/66% het lavender/50% het lavender') ")
-        for trait in include_traits_at_least_one.split("/"):
-          if trait in trait_stock and trait not in at_least_one_traits:
-            at_least_one_traits.append(trait)
-          else:
-            print(f"Sorry, {trait} is not in stock.")
-        more_traits = input("Were there any other traits all the snakes must have at least one of? (Y/N) ")
-      package_order["one_of_traits"] = at_least_one_traits
+  while group_order['must_one_of_traits'] == None:
+    include_traits = input("2. Traits EVERY snake must have AT LEAST one of, such as 'every snake is either clown or het clown'.\nIf any, type them below seperated by '/' (Example: 'clown/het clown/66% het clown/50% het clown'), else hit [ENTER].\n")
+    if include_traits != "":
+      add_traits_to_order(include_traits, 'must_one_of_traits', at_least_one_traits)
     else:
-      at_least_one_traits.append(None)
+      break
   print()
-
-  #getting traits that should be in the package but not every animal needs to have
+  #getting traits that should be in the group but not every animal needs to have
   in_the_pack_traits = []
-  while len(in_the_pack_traits) == 0:
-    include_traits_pack = input("3. Are there any traits that MUST be included in the PACKAGE, but not every snake needs to have? Such as 'at least one pastel and one yellow belly' (Y/N) ")
-    if include_traits_pack.upper() == "Y":
-      more_traits = "Y"
-      while more_traits.upper() == "Y":
-        include_traits_pack = input("Okay, what trait(s) do you want included in the package? (Example: pastel/black head/enchi) ")
-        for trait in include_traits_pack.split("/"):
-          if trait in trait_stock and trait not in in_the_pack_traits:
-            in_the_pack_traits.append(trait)
-          else:
-            print(f"Sorry, {trait} is not in stock.")
-        more_traits= input("Were there any other traits you want included in the package? (Y/N) ")
-      package_order["pack_traits"] = in_the_pack_traits
+  while group_order['pack_traits'] == None:
+    include_traits = input("3. Traits that MUST be included in the group, but not every snake needs to have, such as 'at least one pastel and one yellow belly'.\nIf any, type them below seperated by '/' (Example: 'pastel/enchi/yellow belly'), else hit [ENTER].\n")
+    if include_traits != "":
+      add_traits_to_order(include_traits, 'pack_traits', in_the_pack_traits)
     else:
-      in_the_pack_traits.append(None)
+      break
   print()
-
   #getting traits to exclude
   ex_traits = []
-  while len(ex_traits) == 0:
-    exclude = input("4. Are there any traits you do NOT want included in the package? Such as 'no snake will have spider' (Y/N) ")
-    if exclude.upper() == "Y":
-      more_traits = "Y"
-      while more_traits.upper() == "Y":
-        exclude = input("What traits do you want to exclude? (Example: fire/black pastel/pet only) ")
-        for trait in exclude.split("/"):
-          if trait in trait_stock and trait not in in_the_pack_traits:
-            ex_traits.append(trait)
-          else:
-            print(f"Great news, {trait} is not in stock. No need to worry about that one!")
-        more_traits= input("Were there any other traits you want to exclude in the package? (Y/N) ")
-      package_order["ex_traits"] = ex_traits
-    else:
-      ex_traits.append(None)
-  print()
-
-  #getting required number of traits per snake (if any)
-  trait_count = None
-  trait_min = None
-  trait_max = None
-  while trait_count == None:
-    trait_count_yes = input("Would you like to specify the number of traits in each snake? (Y/N) ")
-    if trait_count_yes.upper() == "Y":
-      while trait_min is None:
-        try:
-          trait_min = int(input("What is the minimum number of traits you would like to have? "))
-        except:
-          print("Sorry, your answer needs to be a number")
-      trait_max_yes = input("Would you like to specify a maximum number of traits in each snake? (Y/N) ")
-      if trait_max_yes.upper() == "Y":
-        while trait_max is None:
-          try:
-            trait_max = int(input("What is the maximum number of traits you would like to have? ")) + 1
-          except:
-            print("Sorry, your answer needs to be a number")
-      if trait_max != None:
-        trait_count = range(trait_min, trait_max)
-      else:
-        trait_count = trait_min
-      package_order["trait_count"] = trait_count
+  while group_order['ex_traits'] == None:
+    exclude_traits = input("4. Traits you do NOT want included in the group, such as 'no pet only or snakes with spider'.\nIf any, type them below seperated by '/' (Example: 'pet only/spider/black pastel'), else hit [ENTER].\n ")
+    if exclude_traits != "":
+        add_traits_to_order(exclude_traits, 'ex_traits', ex_traits)
     else:
       break
 
+  print("\nGot it, finding you snakes...\n")
 
-#divides snake list into two seperate lists (males and females)
-def divide_sexes(list_to_divide):
+
+#divides snake list into two seperate lists (males and females) and removes any doppelgangers
+def divide_sexes_and_remove_doppelgangers(list_to_divide):
   males = []
   females = []
   for snake in list_to_divide:
-    if snake["Sex"] == "male":
+    if snake.sex == 'male':
       males.append(snake)
-    elif snake["Sex"] == "female":
+    elif snake.sex == 'female':
       females.append(snake)
     else:
       continue
-  return males, females
+  print(f"Sexes split, {len(males)} males and {len(females)} females.")
+
+  print("Checking females for doppelgangers...")
+  females_no_doppelgangers = []
+  for female in females:
+    females_no_doppelgangers.append(female)
+    females.remove(female)
+    for other_female in females:
+      if female.price == other_female.price and female.snake_trait_value == other_female.snake_trait_value and female.title == other_female.title:
+        females.remove(other_female)
+  print(f"All doppelgangers removed, {len(females)} unique females.")
+
+  print("Checking males for doppelgangers...")
+  males_no_doppelgangers = []
+  for male in males:
+    males_no_doppelgangers.append(male)
+    males.remove(male)
+    for other_male in males:
+      if male.price == other_male.price and male.snake_trait_value == other_male.snake_trait_value and male.title == other_male.title:
+        males.remove(other_male)
+  print(f"All doppelgangers removed, {len(males)} unique males.")
+
+  return males_no_doppelgangers, females_no_doppelgangers
 
 
-#sorts LISTS of snakes by specified key in snake dict, used in cut_by_price function to find lowest possible price package
-def heapsort_snakes_by(list_to_sort, sort_by):
-  sort = []
-  max_heap = MaxHeap()
-  for snake in list_to_sort:
-    idx = snake[sort_by]
-    max_heap.add(idx)
-  while max_heap.count > 0:
-    max_value = max_heap.retrieve_max()
-    sort.insert(0, max_value)
-  return sort
-
-
-###functions for remvoing snakes that do not fit requirements, or cutting to improve package quality----------------------------------------------------------------------------------------------
+###functions for remvoing snakes that do not fit requirements, or cutting to improve group quality----------------------------------------------------------------------------------------------
 #removes any snakes that do not fit the required sex (if any)
 def cut_by_sex(list_to_cut):
   cut = []
-  if package_order["females"] != 0:
+  if group_order['females'] != 0:
     for snake in list_to_cut:
-      if snake["Sex"] == "female":
+      if snake.sex == 'female':
         cut.append(snake)
-  if package_order["males"] != 0:
+  if group_order['males'] != 0:
     for snake in list_to_cut:
-      if snake["Sex"] == "male":
+      if snake.sex == 'male':
         cut.append(snake)
   return cut
 
 
-#removes any snakes that do not have traits requirements, works with "all_snake_traits", "one_of_traits", and "ex_traits"
+#removes any snakes that do not have traits requirements, used for: "all_snake_traits", 'must_have_traits', and 'ex_traits' in group order dict
 def cut_by_trait(list_to_cut, trait_requirement):
   cut = []
-
-  if trait_requirement == "all_snakes_traits":
-    required_count = len(package_order["all_snakes_traits"])
+  if trait_requirement == 'must_have_traits':
+    required_count = len(group_order['must_have_traits'])
     for snake in list_to_cut:
       required_count_have = 0
-      for trait in package_order["all_snakes_traits"]:
-        if trait in snake["Traits"]:
+      for trait in group_order['must_have_traits']:
+        if trait in snake.traits:
           required_count_have += 1
       if required_count_have == required_count: 
         cut.append(snake)
-
-  elif trait_requirement == "one_of_traits":
+  elif trait_requirement == 'must_one_of_traits':
     for snake in list_to_cut:
-      for trait in snake["Traits"]:
-        if trait in package_order["one_of_traits"] and snake not in cut:
+      for trait in snake.traits:
+        if trait in group_order['must_one_of_traits'] and snake not in cut:
           cut.append(snake)
-
-  elif trait_requirement == "ex_traits":
+  elif trait_requirement == 'ex_traits':
     for snake in list_to_cut:
-      exclude_snake = "N"
-      for trait in package_order["ex_traits"]:
-        if trait in snake["Traits"]:
-          exclude_snake = "Y"
+      exclude_snake = 'N'
+      for trait in group_order['ex_traits']:
+        if trait in snake.traits:
+          exclude_snake = 'Y'
           break
-      if exclude_snake == "N":
+      if exclude_snake == 'N':
         cut.append(snake)
   
   return cut
 
 
 #removes any snakes that do not have the required number of traits (if any)
-def cut_by_trait_num(list_to_cut):
-  cut = []
-  #if only given min
-  if type(package_order["trait_count"]) is int:
-      for snake in list_to_cut:
-        trait_count = 0
-        for trait in snake["Traits"]:
-          trait_count += 1
-        if trait_count >= package_order["trait_count"]:
-          cut.append(snake)
-  #if given a min and max
-  else:
+def remove_snakes_outside_budget(list_to_cut, budget, num_snakes, sex):
+  group_possible = True
+  if num_snakes != 0:
+    price_list = []
+    price_dict = {}
+    min_snakes = num_snakes
     for snake in list_to_cut:
-      trait_count = 0
-      for trait in snake["Traits"]:
-        trait_count += 1
-      if trait_count in package_order["trait_count"]:
-        cut.append(snake)
-  return cut
-
-
-#removes any snakes that are outside of budget, also returns min price for male and female packages
-def cut_by_price(list_to_cut):
-  package_possible = True
-  
-  #removing any male prices too expensive for package in individual sex list
-  if package_order["males"] != 0:
-    min_males = package_order["males"]
-    male_price_list = heapsort_snakes_by(divide_sexes(list_to_cut)[0],"Price")
-    one_male_short = 0
-    for price in male_price_list[0:(min_males-1)]:
-      one_male_short += price
-    if one_male_short >= package_order["budget"]:
-      print(f"Sorry, it looks like a package with {min_males} males is over your budget.")
-      package_possible = False
+      price_list.append(snake.price)
+      if snake.price not in price_dict:
+        price_dict[snake.price] = [snake]
+      else:
+        price_dict[snake.price].append(snake)
+    price_list.sort()
+    one_snake_short_price = 0
+    for price in price_list[0:(min_snakes-1)]:
+      one_snake_short_price += price
+    if one_snake_short_price >= budget:
+      print(f"Sorry, it looks like a group with {min_snakes} {sex} is over your budget.")
+      group_possible = False
     else:
-      while one_male_short + male_price_list[-1] > package_order["budget"]:
-        male_price_list.remove(male_price_list[-1])
-      if len(male_price_list) < min_males:
-        print(f"Sorry, it looks like a package with {min_males} males is over your budget.")
-        package_possible = False
-  
-  #removing any female prices too expensive for package in individual sex list
-  if package_order["females"] != 0:
-    min_females = package_order["females"]
-    female_price_list = heapsort_snakes_by(divide_sexes(list_to_cut)[1],"Price")
-    one_female_short = 0
-    for price in female_price_list[0:(min_females-1)]:
-      one_female_short += price
-    if one_female_short >= package_order["budget"]:
-      print(f"Sorry, it looks like a package with {min_females} females is over your budget.")
-      package_possible = False
-    else:
-      while one_female_short + female_price_list[-1] > package_order["budget"]:
-        female_price_list.remove(female_price_list[-1])
-      if len(female_price_list) < min_females:
-        print(f"Sorry, it looks like a package with {min_females} females is over your budget.")
-        package_possible = False
-  
-  #comparing male and female price lists against each other to remove any snakes outside budget when both sexes in package
-  min_males_price = 0
-  min_female_price = 0
-  if package_possible == True:
-    package_still_possible = True
-    if package_order["males"] != 0 and package_order["females"] != 0:
-      #checking females prices against min male group price, removing if out of budget
-      for price in male_price_list[0:(min_males)]:
-        min_males_price += price
-      while min_males_price + female_price_list[-1] > package_order["budget"]:
-        female_price_list.remove(female_price_list[-1])
-      if len(female_price_list) < min_females:
-        print(f"Sorry, it looks like a package with {min_females} females is over your budget.")
-        package_still_possible = False
-      #checking males prices against min female group price, removing if out of budget
-      for price in female_price_list[0:(min_females)]:
-        min_female_price += price
-      while min_female_price + male_price_list[-1] > package_order["budget"]:
-        male_price_list.remove(male_price_list[-1])
-      if len(male_price_list) < min_males:
-        print(f"Sorry, it looks like a package with {min_males} males is over your budget.")
-        package_still_possible = False
+      while one_snake_short_price + price_list[-1] > budget:
+        if price_list[-1] in price_dict:
+          price_dict.pop(price_list[-1])
+        price_list.remove(price_list[-1])
+      if len(price_list) < min_snakes:
+        print(f"Sorry, it looks like a group with {min_snakes} {sex} is over your budget.")
+        group_possible = False
     
-    #removing any snakes with prices not in price lists 
-    male_list = []
-    female_list = []
-    
-    if package_order["males"] != 0:
-      male_list = divide_sexes(list_to_cut)[0]
-      for snake in male_list:
-        if snake["Price"] not in male_price_list:
-          male_list.remove(snake)
-    if package_order["females"] != 0:      
-      female_list = divide_sexes(list_to_cut)[1]
-      for snake in female_list:
-        if snake["Price"] not in female_price_list:
-          female_list.remove(snake)
-        
-  if package_still_possible:
-    return male_list, female_list, min_males_price, min_female_price
+    if group_possible == True:
+      in_budget_snakes = []
+      for key in price_dict:
+        snakes_to_add = price_dict[key]
+        for snake in snakes_to_add:
+          in_budget_snakes.append(snake)
+
+      min_price = 0
+      for price in price_list[0:(min_snakes)]:
+        min_price += price
+
+  if group_possible == True:
+    return in_budget_snakes, min_price
   else:
-    return None
+    return [], None
+    
+
+#removes any snakes that are outside of budget, also returns min price for male and female groups
+def cut_by_price(list_to_cut):
+  group_possible = True
+  print("Adjusting snake prices for discount...")
+  adjust_price_discount(list_to_cut)
+  print("Discount applied. Dividing sexes and removing doppelgangers...")
+  divide_sexes = divide_sexes_and_remove_doppelgangers(list_to_cut)
+  males_no_dop = divide_sexes[0]
+  females_no_dop = divide_sexes[1]
+  #removing any male or female prices too expensive for group in individual sex list if sex is in group_order
+  if group_order['males'] != 0:
+    remove_overpriced_males = remove_snakes_outside_budget(males_no_dop, group_order['budget'], group_order['males'], 'males')
+    males_in_budget = remove_overpriced_males[0]
+    min_males_price = remove_overpriced_males[1]
+    if len(males_in_budget) < group_order['males']:
+      group_possible = False
+      print("Not enough males within budget.")
+  if group_order['females'] != 0:  
+    remove_overpriced_females = remove_snakes_outside_budget(females_no_dop, group_order['budget'], group_order['females'], 'females')
+    females_in_budget = remove_overpriced_females[0]
+    min_females_price = remove_overpriced_females[1]
+    if len(females_in_budget) < group_order['females']:
+      group_possible = False
+      print("Not enough females within budget.")
+  #removing any additional snakes too expensive for group order when both sexes are in group_order
+  if group_order['males'] != 0 and group_order['females'] != 0 and group_possible == True:
+    budget_for_males = group_order['budget'] - min_females_price
+    recheck_males_in_budget = remove_snakes_outside_budget(males_in_budget, budget_for_males, group_order['males'], 'males')
+    males_in_budget = recheck_males_in_budget[0]
+
+    budget_for_females = group_order['budget'] - min_males_price
+    recheck_females_in_budget = remove_snakes_outside_budget(females_in_budget, budget_for_females, group_order['females'], 'females')
+    females_in_budget = recheck_females_in_budget[0]
+
+    if len(males_in_budget) + len(females_in_budget) < group_order['males'] + group_order['females']:
+      group_possible = False
+      print("Cannot make a package within budget with both males and females.")
+        
+  if group_possible == True:
+    return males_in_budget, females_in_budget, min_males_price, min_females_price
+  else:
+    return [], [], None, None
 
 
-#combination of cut functions, cuts out any snakes that do not fit individual criteria for package and returns male and female lists,also returns minimum price for male and female packages
+#combination of cut functions, cuts out any snakes that do not fit individual criteria for group and returns male and female lists,also returns minimum price for male and female groups
 def cut_snakes():
-  package_possible = True
+  group_possible = True
   #removing any snakes that are not of desired sex (if any)
-  if package_order["males"] == 0 or package_order["females"] == 0:
+  if group_order['males'] == 0 or group_order['females'] == 0:
     try:
       cut1 = cut_by_sex(snakes)
       print(f"\nMaking cut, removing undesired sex. {len(cut1)} snakes in bag.")
     except:
-      package_possible = False
+      group_possible = False
   else:
     cut1 = snakes[:]
+    print(f"Order males and females: {len(cut1)} possible snakes.")
   
   #removing any snakes that do not have mandatory traits
-  if package_order["all_snakes_traits"] != None and package_possible == True:
-    cut2 = cut_by_trait(cut1,"all_snakes_traits")
+  if group_order['must_have_traits'] != None and group_possible == True:
+    cut2 = cut_by_trait(cut1,'must_have_traits')
     if len(cut2) == 0:
-      print(f"Sorry, there aren't any available snakes with {package_order['all_snakes_traits']}\n")
-      package_possible = False
+      print(f"Sorry, there aren't any available snakes with {group_order['must_have_traits']}\n")
+      group_possible = False
     else:
-      print(f"\nMaking cut, removing snakes that do not have required traits: {package_order['all_snakes_traits']}. {len(cut2)} snakes in bag.")
+      print(f"\nMaking cut, removing snakes that do not have required traits: {group_order['must_have_traits']}. {len(cut2)} snakes in bag.")
   else:
     cut2 = cut1[:]
+    print(f"No required traits all snakes must have: {len(cut2)} possible snakes.")
   
   #removing snakes that do not have a trait from list of 'at least one' traits
-  if package_order["one_of_traits"] != None and package_possible == True:
-    cut3 = cut_by_trait(cut2, "one_of_traits")
+  if group_order['must_have_traits'] != None and group_possible == True:
+    cut3 = cut_by_trait(cut2, 'must_have_traits')
     if len(cut3) == 0:
-      print(f"Sorry, there aren't any available snakes left with {package_order['one_of_traits']}\n")
-      package_possible = False
+      print(f"Sorry, there aren't any available snakes left with {group_order['must_one_of_traits']}\n")
+      group_possible = False
     else:
-      print(f"\nMaking cut, removing snakes that do not have at least one of these traits: {package_order['one_of_traits']}. {len(cut3)} snakes in bag.")
+      print(f"\nMaking cut, removing snakes that do not have at least one of these traits: {group_order['must_one_of_traits']}. {len(cut3)} snakes in bag.")
   else:
     cut3 = cut2[:]
+    print(f"No required traits snakes must have at least one of: {len(cut3)} possible snakes.")
   
   #removing snakes that have a trait from the list 'ex_traits'
-  if package_order["ex_traits"] != None and package_possible == True:
-    cut4 = cut_by_trait(cut3, "ex_traits")
+  if group_order['ex_traits'] != None and group_possible == True:
+    cut4 = cut_by_trait(cut3, 'ex_traits')
     if len(cut4) == 0:
-      print(f"Sorry, there aren't any available snakes left that don't have one of these undesired traits: {package_order['ex_traits']}\n")
-      package_possible = False
+      print(f"Sorry, there aren't any available snakes left that don't have one of these undesired traits: {group_order['ex_traits']}\n")
+      group_possible = False
     else:
-      print(f"\nMaking cut, removing snakes that have any of these undesired traits: {package_order['ex_traits']}. {len(cut4)} snakes in bag.")
+      print(f"\nMaking cut, removing snakes that have any of these undesired traits: {group_order['ex_traits']}. {len(cut4)} snakes in bag.")
   else:
     cut4 = cut3[:]
-  
-  #removing snakes that do not have desired number of traits
-  if package_order["trait_count"] != None and package_possible == True:
-    cut5 = cut_by_trait_num(cut4)
-    if len(cut5) == 0:
-      print(f"Sorry, there aren't any available snakes left that don't have the desired number of traits: {package_order['trait_count']}\n")
-      package_possible = False
-    else:
-      print(f"\nMaking cut, removing snakes that do not have the desired number of traits: {package_order['trait_count']}. {len(cut5)} snakes in bag.")
-  else:
-    cut5 = cut4[:]
+    print(f"No traits to exclude: {len(cut4)} possible snakes.")
   
   #removing any remaining snakes that are too expensive for budget
   try:
-    final_cut = cut_by_price(cut5)
-    if final_cut != None and package_possible == True:
+    print("Last cut, cutting by price...")
+    final_cut = cut_by_price(cut4)
+    print(f"Cut complete, {len(final_cut[0])} possible males and {len(final_cut[1])} possible females.")
+    if final_cut != None and group_possible == True:
       males_list = final_cut[0]
       females_list = final_cut[1]
-      min_male_package_price = final_cut[2]
-      min_female_package_price = final_cut[3]
+      min_male_group_price = final_cut[2]
+      min_female_group_price = final_cut[3]
       print(f"\nRemoving snakes outside of budget and splitting by sex... {len(males_list)} males and {len(females_list)} females in bag.\n")
-      return males_list,females_list, min_male_package_price, min_female_package_price
+      return males_list,females_list, min_male_group_price, min_female_group_price
     else:
       return None
   except:
     return None
 
 
-#only keeps packs with reasonably balanced snake prices, to avoid extreem value differences within packs (ex. $2000 and $50 snakes in same package)
-def balanced_snake_price_packs_only(package_list_to_cut):
+#only keeps packs with reasonably balanced snake prices, to avoid extreem value differences within packs (ex. $2000 and $50 snakes in same group)
+def balanced_snake_price_packs_only(group_list_to_cut):
   balanced_packs = []
   try:
-    for pack in package_list_to_cut:
+    for pack in group_list_to_cut:
       min_reasonable_price = pack.price // ((len(pack.snakes) - 1) * 10)
       pack_balanced = True
       for snake in pack.snakes:
@@ -593,48 +543,52 @@ def balanced_snake_price_packs_only(package_list_to_cut):
     if len(balanced_packs) > 1:
       return balanced_packs
     else:
-      return package_list_to_cut
+      return group_list_to_cut
   except:
-    return package_list_to_cut
+    return group_list_to_cut
 
 
 #Removes near idential packs (such as when packs are same price and have all the same traits due to sibling snakes with identical traits)
-def remove_doppelganger_packs(package_list_to_cut):
-  copy_list_to_cut = package_list_to_cut[:]
+def remove_doppelganger_packs(group_list_to_cut):
+  copy_list_to_cut = group_list_to_cut[:]
   cut_list = []
   for pack in copy_list_to_cut:
     cut_list.append(pack)
     copy_list_to_cut.remove(pack)
     for other_pack in copy_list_to_cut:
-      if pack.price == other_pack.price:
-        if len(pack.package_traits) == len(other_pack.package_traits):
+      if pack.price == other_pack.price and pack.group_trait_value == other_pack.group_trait_value:
+        if len(pack.group_traits) == len(other_pack.group_traits):
           traits_match = True
-          for trait in pack.package_traits:
-            if trait not in other_pack.package_traits:
+          for trait in pack.group_traits:
+            if trait not in other_pack.group_traits:
               traits_match = False
           if traits_match == True:
             copy_list_to_cut.remove(other_pack)
   return cut_list
 
          
-###package making functions------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#finding all combos that fit count and budget constraits, converting each combo to a Ball_Python_Package: functions 'balanced_snake_price_packs_only' and 'remove_doppelganger' used to cut out less desirable and near duplicate packs
+###group making functions------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#finding all combos that fit count and budget constraits, converting each combo to a Ball_Python_group: functions 'balanced_snake_price_packs_only' and 'remove_doppelganger' used to cut out less desirable and near duplicate packs
 def find_combos_lists_to_packs(snake_list, num_snakes, budget_cap):
   all_combos = []
   pos_combos = itertools.combinations(snake_list, num_snakes)
   list_combos = list(pos_combos)
+  print(f"Found {len(list_combos)} combos. Removing combos outside of budget...")
   for combo in list_combos:
-    combo_pack = Ball_Python_Package(price=0, pack_trait_count=0, pack_trait_value=0, snakes=[], package_traits=[])
-    combo_pack.build_bp_package(combo)
+    combo_pack = BP_Group(price=0, group_trait_value=0, snakes=[], group_traits=[])
+    combo_pack.build_bp_group(combo)
     if combo_pack.price <= budget_cap:  
       all_combos.append(combo_pack)
+  print(f"Complete, {len(all_combos)} combos inside budget. Removing unbalanced combos...")
   balanced_combos = balanced_snake_price_packs_only(all_combos)
+  print(f"Complete, {len(balanced_combos)} combos.  Removing doppelganger combos...")
   unique_combos = remove_doppelganger_packs(balanced_combos)
+  print(f"Complete, {len(unique_combos)} combos remainging")
   return unique_combos
 
 
-#combines the male/female packages and returns a list of the packages that fit the budget and trait requirements: functions 'shrink_to_specific', 'balanced_snake_price_packs_only' and 'within_75_percent_budget' built in to cut out packages that are less than ideal
-def find_balanced_combos(budget, combo_packs1, combo_packs2=None, include_in_package_traits = None):
+#combines the male/female groups and returns a list of the groups that fit the budget and trait requirements: functions 'shrink_to_specific', 'balanced_snake_price_packs_only' and 'within_75_percent_budget' built in to cut out groups that are less than ideal
+def find_balanced_combos(budget, combo_packs1, combo_packs2=None, include_in_group_traits = None):
   all_pack_combos = []
   shrunk_combos1 = shrink_to_specific(combo_packs1, 250)
   if combo_packs2 != None:
@@ -643,25 +597,25 @@ def find_balanced_combos(budget, combo_packs1, combo_packs2=None, include_in_pac
       for combo2 in shrunk_combos2:
         mf_combo_price = combo1.price + combo2.price
         if  mf_combo_price <= budget:
-          combo = Ball_Python_Package(price=0, pack_trait_count=0, pack_trait_value=0, snakes=[], package_traits=[])
-          combo.combine_bp_packages(combo1,combo2)
-          if include_in_package_traits != None:
+          combo = BP_Group(price=0, group_trait_value=0, snakes=[], group_traits=[])
+          combo.combine_bp_groups(combo1,combo2)
+          if include_in_group_traits != None:
             traits_count = 0
-            for trait in include_in_package_traits:
-              if trait in combo.package_traits:
+            for trait in include_in_group_traits:
+              if trait in combo.group_traits:
                 traits_count +=1
-            if traits_count == len(include_in_package_traits):
+            if traits_count == len(include_in_group_traits):
               all_pack_combos.append(combo)
           else:
             all_pack_combos.append(combo)
   else:
     for combo1 in shrunk_combos1:
-      if include_in_package_traits != None:
+      if include_in_group_traits != None:
         traits_count = 0
-        for trait in include_in_package_traits:
-          if trait in combo1.package_traits:
+        for trait in include_in_group_traits:
+          if trait in combo1.group_traits:
             traits_count +=1
-        if traits_count == len(include_in_package_traits):
+        if traits_count == len(include_in_group_traits):
           all_pack_combos.append(combo1)
       else:
         all_pack_combos.append(combo1)
@@ -671,44 +625,44 @@ def find_balanced_combos(budget, combo_packs1, combo_packs2=None, include_in_pac
   return balanced_combos_final
 
 
-###arragement functions for identifying best packages-----------------------------------------------------------------------------------------------------------------------------------------------
-#arranges list of packages by most to least pack traits
-def arrange_by_most_pack_traits(package_list_arrange):
-  copy_list_to_arrange = package_list_arrange[:]
-  num_packs = len(copy_list_to_arrange)
-  max_packs = []
-  while len(max_packs) != num_packs:
-    max_traits = 0
-    for pack in copy_list_to_arrange:
-      if len(pack.package_traits) > max_traits:
-        max_traits = len(pack.package_traits)
-    for pack in copy_list_to_arrange:
-      if len(pack.package_traits) == max_traits:
-        max_packs.append(pack)
-        copy_list_to_arrange.remove(pack)
-  return max_packs
+###arragement functions for identifying best groups-----------------------------------------------------------------------------------------------------------------------------------------------
+#arranges list of groups by most to least pack traits
+# def arrange_by_most_pack_traits(group_list_arrange):
+#   copy_list_to_arrange = group_list_arrange[:]
+#   num_packs = len(copy_list_to_arrange)
+#   max_packs = []
+#   while len(max_packs) != num_packs:
+#     max_traits = 0
+#     for pack in copy_list_to_arrange:
+#       if len(pack.group_traits) > max_traits:
+#         max_traits = len(pack.group_traits)
+#     for pack in copy_list_to_arrange:
+#       if len(pack.group_traits) == max_traits:
+#         max_packs.append(pack)
+#         copy_list_to_arrange.remove(pack)
+#   return max_packs
 
 
-#arranges list of packages by overall value of included traits in each package
-def arrange_by_highest_pack_trait_value(package_list_arrange):
-  copy_list_to_arrange = package_list_arrange[:]
+#arranges list of groups by overall value of included traits in each group
+def arrange_by_highest_group_trait_value(group_list_arrange):
+  copy_list_to_arrange = group_list_arrange[:]
   num_packs = len(copy_list_to_arrange)
   max_value_packs = []
   while len(max_value_packs) != num_packs:
     max_value = 0
     for pack in copy_list_to_arrange:
-      if pack.pack_trait_value > max_value:
-        max_value = pack.pack_trait_value
+      if pack.group_trait_value > max_value:
+        max_value = pack.group_trait_value
     for pack in copy_list_to_arrange:
-      if pack.pack_trait_value == max_value:
+      if pack.group_trait_value == max_value:
         max_value_packs.append(pack)
         copy_list_to_arrange.remove(pack)
   return max_value_packs
 
 
-#arranges list of packages by lowest to highest price (used in 'shrink_to_specific' function in the case of too many possible options)
-def arrange_by_price(package_list_arrange):
-  copy_list_to_arrange = package_list_arrange[:]
+#arranges list of groups by lowest to highest price (used in 'shrink_to_specific' function in the case of too many possible options)
+def arrange_by_price(group_list_arrange):
+  copy_list_to_arrange = group_list_arrange[:]
   num_packs = len(copy_list_to_arrange)
   cheap_packs = []
   while len(cheap_packs) != num_packs:
@@ -723,64 +677,68 @@ def arrange_by_price(package_list_arrange):
   return cheap_packs
 
 
-#arranges list of packages by best overall, taking into account trait count and trait value
-def arrange_by_best_overall_package(package_list_arrange):
-  print("arranging by most pack traits...")
-  best_trait_count = arrange_by_most_pack_traits(package_list_arrange)
-  print(f"Best trait count package: ({best_trait_count[0].pack_trait_count}){best_trait_count[0].package_traits}, this package's trait value: {best_trait_count[0].pack_trait_value}\n")
-  print("arranging by highest pack trait value...")
-  best_value = arrange_by_highest_pack_trait_value(package_list_arrange)
-  print(f"Best trait value package: ({best_value[0].pack_trait_count}){best_value[0].package_traits}, this package's trait value: {best_value[0].pack_trait_value}\n")
-  #using index positions of packs in both best price and best traits to generate a "value" score for arranging packs by best overall
-  idx_dict = {}
-  print("Getting trait index...")
-  for trait_pack in best_trait_count:
-    trait_idx = best_trait_count.index(trait_pack)
-    for value_pack in best_value:
-      if value_pack == trait_pack:
-        value_idx = best_value.index(value_pack)
-    idx_key = trait_idx + value_idx
-    if idx_key in idx_dict:
-      while idx_key in idx_dict:
-        idx_key += 1
-    idx_dict[idx_key] = trait_pack
-  #rearranging package list by overall best packages
-  num_packs = len(package_list_arrange)
-  best_packs = []
-  print("Rearranging packs by best...")
-  while len(best_packs) != num_packs:
-    min_idx = min(idx_dict)
-    best_packs.append(idx_dict[min_idx])
-    idx_dict.pop(min_idx)
-  print("Rearranging finished!")
-  return best_packs
+#arranges list of groups by best overall, taking into account trait count and trait value
+# def arrange_by_best_overall_group(group_list_arrange):
+#   print("arranging by most pack traits...")
+#   best_trait_count = arrange_by_most_pack_traits(group_list_arrange)
+#   print(f"Best trait count group: ({best_trait_count[0].pack_trait_count}){best_trait_count[0].group_traits}, this group's trait value: {best_trait_count[0].group_trait_value}\n")
+#   print("arranging by highest pack trait value...")
+#   best_value = arrange_by_highest_group_trait_value(group_list_arrange)
+#   print(f"Best trait value group: ({best_value[0].pack_trait_count}){best_value[0].group_traits}, this group's trait value: {best_value[0].group_trait_value}\n")
+#   #using index positions of packs in both best price and best traits to generate a "value" score for arranging packs by best overall
+#   idx_dict = {}
+#   print("Getting trait index...")
+#   for trait_pack in best_trait_count:
+#     trait_idx = best_trait_count.index(trait_pack)
+#     for value_pack in best_value:
+#       if value_pack == trait_pack:
+#         value_idx = best_value.index(value_pack)
+#     idx_key = trait_idx + value_idx
+#     if idx_key in idx_dict:
+#       while idx_key in idx_dict:
+#         idx_key += 1
+#     idx_dict[idx_key] = trait_pack
+#   #rearranging group list by overall best groups
+#   num_packs = len(group_list_arrange)
+#   best_packs = []
+#   print("Rearranging packs by best...")
+#   while len(best_packs) != num_packs:
+#     min_idx = min(idx_dict)
+#     best_packs.append(idx_dict[min_idx])
+#     idx_dict.pop(min_idx)
+#   print("Rearranging finished!")
+#   return best_packs
 
 
-###Performance enhancers, cuts less desireable itmes to improve speed-----------------------------------------------------------------------------------------------------------------------------
-#shrinks list of packages if length specified, used to prevent performance/freezing issues caused by too many possibilities
+###Performance enhancers, cuts less desireable items to improve speed-----------------------------------------------------------------------------------------------------------------------------
+#shrinks list of groups if length specified, used to prevent performance/freezing issues caused by too many possibilities
 def shrink_to_specific(list_to_shrink, shrink_to_num):
   if len(list_to_shrink) > shrink_to_num:
     cut_by = (len(list_to_shrink) - shrink_to_num)
+    print(f"Snakes to be cut: {cut_by}")
     arranged_price_list = arrange_by_price(list_to_shrink)
+    print("list arranged by price, shrinking now...")
     shrunk_list = arranged_price_list[cut_by:]
+    print(f"List shrunk: {len(shrunk_list)}")
     return shrunk_list
   else:
     return list_to_shrink
 
 
 #cuts out packs that are less than 75% of the budget
-def within_75_percent_budget(package_list_to_cut):
-  within_75_packages = []
-  for pack in package_list_to_cut:
-    if pack.price >= int(package_order["budget"] * 0.75):
-      within_75_packages.append(pack)
-  if len(within_75_packages) < 5:
-    return package_list_to_cut
+def within_75_percent_budget(group_list_to_cut):
+  within_75_groups = []
+  for pack in group_list_to_cut:
+    if pack.price >= int(group_order['budget'] * 0.75):
+      within_75_groups.append(pack)
+  if len(within_75_groups) < 5:
+    return group_list_to_cut
   else:
-    return within_75_packages
+    return within_75_groups
+
 
 ###formated return of best results-------------------------------------------------------------------------------------------------------------------------------------------------------------
-#Prints best 3 packages
+#Prints best 3 groups
 def top_3_return(best_packs):
   if len(best_packs) >= 3:
     top_overall_packs = best_packs[:3]
@@ -788,20 +746,21 @@ def top_3_return(best_packs):
     top_overall_packs = best_packs
 
   print("\n----------------------------")
-  print(f"Top {len(top_overall_packs)} Best Overall Packages:")
+  print(f"Top {len(top_overall_packs)} Best Overall groups:")
   print("----------------------------\n")
   count = 1
   for pack in top_overall_packs:
-    print(f"Pack {count}: Price: ${pack.price}0   Number of Unique Traits: {len(pack.package_traits)}")
+    print(f"Pack {count}: Price: ${pack.price:.2f}")
     count += 1
     for snake in pack.snakes:
-      print(f"        {snake['Animal_Id*']}: {snake['Title*']}   Price: ${snake['Price']}0")
+      print(f"        {snake.snake_id}: {snake.title}   Price: ${snake.price:.2f}")
     print()
      
 
 
 get_shop_stock()
-in_stock_traits()
+copy_snake_list = snakes[:]
+# in_stock_traits()
 welcome_message()
 
 #taking order and returning all possible snakes that fit requirements
@@ -810,39 +769,41 @@ while possible_snakes == None:
   take_order()
   possible_snakes = cut_snakes()
   if possible_snakes == None:
-    # in the case that the order is impossible to fill, resets package_order so no traits left in lists from previous attempt
-    package_order = {"budget":None, "num_snakes":0, "discount":None, "females":0, "males":0, "all_snakes_traits":None, "one_of_traits":None, "pack_traits":None, "ex_traits":None, "trait_count":None}
+    # in the case that the order is impossible to fill, resets group_order so no traits left in lists from previous attempt, also reset snakes so price discount does not carry over from previous attempt
+    group_order = {'budget':None, "num_snakes":0, "discount":None, 'females':0, 'males':0, 'must_have_traits':None, 'must_have_traits':None, "pack_traits":None, 'ex_traits':None, 'trait_count':None}
+    snakes = copy_snake_list
     print("Let's try again. Are there any requirements you could lower or do without?\n")
 possible_males = possible_snakes[0]
 possible_females = possible_snakes[1]
 min_male_pack_price = possible_snakes[2]
 min_female_pack_price = possible_snakes[3]
 
-#getting possible packages for males and/or females based on package order
-if package_order['males'] > 0:
-  possible_male_combos = find_combos_lists_to_packs(possible_males, package_order['males'], (package_order['budget']-min_female_pack_price))
+#getting possible groups for males and/or females based on group order
+if group_order['males'] > 0:
+  possible_male_combos = find_combos_lists_to_packs(possible_males, group_order['males'], (group_order['budget']-min_female_pack_price))
   print(f"Found {len(possible_male_combos)} possible male combos.")
-if package_order['females'] > 0:
-  possible_female_combos = find_combos_lists_to_packs(possible_females, package_order['females'],(package_order['budget']-min_male_pack_price))
+if group_order['females'] > 0:
+  possible_female_combos = find_combos_lists_to_packs(possible_females, group_order['females'],(group_order['budget']-min_male_pack_price))
   print(f"Found {len(possible_female_combos)} possible female combs.")
 
-#calculating final packages for orders that contain both males and females
-if package_order['males'] > 0 and package_order['females'] > 0:
+#calculating final groups for orders that contain both males and females
+if group_order['males'] > 0 and group_order['females'] > 0:
   print("Combining male and female combos...")
-  possible_male_and_female_combos = find_balanced_combos(package_order['budget'], possible_male_combos, possible_female_combos, package_order['pack_traits'])
+  possible_male_and_female_combos = find_balanced_combos(group_order['budget'], possible_male_combos, possible_female_combos, group_order['pack_traits'])
   print(f"{len(possible_male_and_female_combos)} possible male/female combos")
-  by_best_pack = arrange_by_best_overall_package(possible_male_and_female_combos)
-#calculating final packages for orders that contain only males
-elif package_order['males'] > 0:
-  print("\nFinding best overall male packages...")
-  just_males = find_balanced_combos(package_order['budget'], possible_male_combos, package_order['pack_traits'])
-  by_best_pack = arrange_by_best_overall_package(just_males)
-#calculating final packages for orders that contain only females
+  # by_best_pack = arrange_by_best_overall_group(possible_male_and_female_combos)
+  by_best_pack = arrange_by_highest_group_trait_value(possible_male_and_female_combos)
+#calculating final groups for orders that contain only males
+elif group_order['males'] > 0:
+  print("\nFinding best overall male groups...")
+  just_males = find_balanced_combos(group_order['budget'], possible_male_combos, group_order['pack_traits'])
+  # by_best_pack = arrange_by_best_overall_group(just_males)
+  by_best_pack = arrange_by_highest_group_trait_value(just_males)
+#calculating final groups for orders that contain only females
 else:
-  print("\nFinding best overall female packages...")
-  just_females = find_balanced_combos(package_order['budget'], possible_female_combos, package_order['pack_traits'])
-  by_best_pack = arrange_by_best_overall_package(just_females)
+  print("\nFinding best overall female groups...")
+  just_females = find_balanced_combos(group_order['budget'], possible_female_combos, group_order['pack_traits'])
+  # by_best_pack = arrange_by_best_overall_group(just_females)
+  by_best_pack = arrange_by_highest_group_trait_value(just_females)
 
 top_3_return(by_best_pack)
-
-
