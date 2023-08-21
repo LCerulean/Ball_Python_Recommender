@@ -62,6 +62,10 @@ class Trait:
     #updating trait's type if found in trait_type_dict
     if self.trait_name in trait_type_dict['r_visual']:
       self.trait_type = 'r_visual'
+    elif self.trait_name in trait_type_dict['non-genetic']:
+      self.trait_type = 'non-genetic'
+    elif self.trait_name in trait_type_dict['defect']:
+      self.trait_type = 'defect'
     #adding trait to trait_type_dict if not already in there
     if self.trait_type == None:
       is_het = self.trait_name.find('het')
@@ -89,5 +93,5 @@ class Trait:
           self.trait_type = 'c_single'
 
     #assigns trait's value
-    trait_value_dict = {'r_visual':4, 'r_100_het':3, 'r_50_66_het':1, 'r_pos_het':0, 'c_single':2, 'c_super':3, 'non-genetic':0, 'pet only':-1}
+    trait_value_dict = {'r_visual':4, 'r_100_het':3, 'r_50_66_het':1, 'r_pos_het':0, 'c_single':2, 'c_super':3, 'non-genetic':0, 'defect':-1}
     self.trait_value = trait_value_dict[self.trait_type]

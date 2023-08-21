@@ -90,8 +90,8 @@ def convert_snake_traits_to_list(snake_traits_data):
 #categorizes and prints in stock traits for user
 def categorized_in_stock_traits():
   copy_trait_stock = trait_stock.copy()
-  #getting max length of traits for standardizing collumns for printing
-  len_trait_block = 0
+  #getting max length of traits for standardizing collumns for printing (min 17 due to length of codominante traits title)
+  len_trait_block = 17
   for trait in copy_trait_stock:
     if len(trait) > len_trait_block:
       len_trait_block = len(trait)
@@ -150,7 +150,7 @@ def categorized_in_stock_traits():
     other_traits.append(" ")
 
   #formats and prints the categorized traits
-  trait_col_header = "\nRECESSIVE TRAITS     CODOMINANT TRAITS     OTHER\n"
+  trait_col_header = "\nRECESSIVE TRAITS      CODOMINANT TRAITS     OTHER\n"
   list_len_max = max(len(recessive_traits), len(codominant_traits))
   idx = 0
   for num in range(list_len_max):
