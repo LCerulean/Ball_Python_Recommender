@@ -347,12 +347,12 @@ def cut_by_trait(list_to_cut, trait_requirement):
           required_count_have += 1
       if required_count_have == required_count: 
         cut.append(snake)
-  elif trait_requirement == 'must_one_of_traits':
+  if trait_requirement == 'must_one_of_traits':
     for snake in list_to_cut:
       for trait in snake.traits:
         if trait in group_order['must_one_of_traits'] and snake not in cut:
           cut.append(snake)
-  elif trait_requirement == 'ex_traits':
+  if trait_requirement == 'ex_traits':
     for snake in list_to_cut:
       exclude_snake = 'N'
       for trait in group_order['ex_traits']:
@@ -510,7 +510,7 @@ def cut_snakes():
     print("Last cut, cutting by price...")
     final_cut = cut_by_price(cut4)
     print(f"Cut complete, {len(final_cut[0])} possible males and {len(final_cut[1])} possible females.")
-    if final_cut != None and group_possible == True:
+    if final_cut[2] != None and final_cut[3] != None and group_possible == True:
       males_list = final_cut[0]
       females_list = final_cut[1]
       min_male_group_price = final_cut[2]
@@ -734,7 +734,7 @@ while possible_snakes == None:
   possible_snakes = cut_snakes()
   if possible_snakes == None:
     # in the case that the order is impossible to fill, resets group_order so no traits left in lists from previous attempt, also reset snakes so price discount does not carry over from previous attempt
-    group_order = {'budget':None, "num_snakes":0, "discount":None, 'females':0, 'males':0, 'must_have_traits':None, 'must_have_traits':None, "group_traits":None, 'ex_traits':None, 'trait_count':None}
+    group_order = {'budget':None, "num_snakes":0, "discount":None, 'females':0, 'males':0, 'must_have_traits':None, 'must_one_of_traits':None, "group_traits":None, 'ex_traits':None, 'trait_count':None}
     snakes = copy_snake_list
     print("Let's try again. Are there any requirements you could lower or do without?\n")
 possible_males = possible_snakes[0]
@@ -743,31 +743,32 @@ min_male_group_price = possible_snakes[2]
 min_female_group_price = possible_snakes[3]
 
 #getting possible groups for males and/or females based on group order
-if group_order['males'] > 0:
-  possible_male_combos = find_combos_lists_to_groups(possible_males, group_order['males'], (group_order['budget']-min_female_group_price))
-  print(f"Found {len(possible_male_combos)} possible male combos.")
-if group_order['females'] > 0:
-  possible_female_combos = find_combos_lists_to_groups(possible_females, group_order['females'],(group_order['budget']-min_male_group_price))
-  print(f"Found {len(possible_female_combos)} possible female combs.")
+if possible_snakes != None:
+  if group_order['males'] > 0:
+    possible_male_combos = find_combos_lists_to_groups(possible_males, group_order['males'], (group_order['budget']-min_female_group_price))
+    print(f"Found {len(possible_male_combos)} possible male combos.")
+  if group_order['females'] > 0:
+    possible_female_combos = find_combos_lists_to_groups(possible_females, group_order['females'],(group_order['budget']-min_male_group_price))
+    print(f"Found {len(possible_female_combos)} possible female combs.")
 
-#calculating final groups for orders that contain both males and females
-if group_order['males'] > 0 and group_order['females'] > 0:
-  print("Combining male and female combos...")
-  possible_male_and_female_combos = find_balanced_combos(group_order['budget'], possible_male_combos, possible_female_combos, group_order['group_traits'])
-  print(f"{len(possible_male_and_female_combos)} possible male/female combos")
-  # by_best_group = arrange_by_best_overall_group(possible_male_and_female_combos)
-  by_best_group = arrange_by_highest_group_trait_value(possible_male_and_female_combos)
-#calculating final groups for orders that contain only males
-elif group_order['males'] > 0:
-  print("\nFinding best overall male groups...")
-  just_males = find_balanced_combos(group_order['budget'], possible_male_combos, group_order['group_traits'])
-  # by_best_group = arrange_by_best_overall_group(just_males)
-  by_best_group = arrange_by_highest_group_trait_value(just_males)
-#calculating final groups for orders that contain only females
-else:
-  print("\nFinding best overall female groups...")
-  just_females = find_balanced_combos(group_order['budget'], possible_female_combos, group_order['group_traits'])
-  # by_best_group = arrange_by_best_overall_group(just_females)
-  by_best_group = arrange_by_highest_group_trait_value(just_females)
+  #calculating final groups for orders that contain both males and females
+  if group_order['males'] > 0 and group_order['females'] > 0:
+    print("Combining male and female combos...")
+    possible_male_and_female_combos = find_balanced_combos(group_order['budget'], possible_male_combos, possible_female_combos, group_order['group_traits'])
+    print(f"{len(possible_male_and_female_combos)} possible male/female combos")
+    # by_best_group = arrange_by_best_overall_group(possible_male_and_female_combos)
+    by_best_group = arrange_by_highest_group_trait_value(possible_male_and_female_combos)
+  #calculating final groups for orders that contain only males
+  elif group_order['males'] > 0:
+    print("\nFinding best overall male groups...")
+    just_males = find_balanced_combos(group_order['budget'], possible_male_combos, group_order['group_traits'])
+    # by_best_group = arrange_by_best_overall_group(just_males)
+    by_best_group = arrange_by_highest_group_trait_value(just_males)
+  #calculating final groups for orders that contain only females
+  else:
+    print("\nFinding best overall female groups...")
+    just_females = find_balanced_combos(group_order['budget'], possible_female_combos, group_order['group_traits'])
+    # by_best_group = arrange_by_best_overall_group(just_females)
+    by_best_group = arrange_by_highest_group_trait_value(just_females)
 
-top_3_return(by_best_group)
+  top_3_return(by_best_group)
