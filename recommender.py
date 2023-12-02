@@ -6,7 +6,7 @@ from bp_classes import *
 trait_type_dict = {'r_visual':['lavender', 'piebald', 'clown', 'hypo'], 'r_100_het':[], 'r_50_66_het':[], 'r_pos_het':[], 'c_single':[], 'c_super':[], 'non-genetic':['paradox'], 'defect':['pet only']}
 #list for all snakes in stock
 snakes = []
-#list for all traits in stock
+#dictionary for all traits in stock, trait_name:trait_class_item
 trait_stock = {}
 
 group_order = {'budget':None, 'discount':None, 'females':0, 'males':0, 'must_have_traits':None, 'must_one_of_traits':None, 'group_traits':None, 'ex_traits':None}
@@ -37,6 +37,26 @@ def get_shop_stock():
         snakes.append(snake_info)
   return snakes
     
+
+#Attempts to correct user if they make a spelling error when entering trait names
+def spell_check(trait):
+  closest_match = None
+  match_letter_count = 0
+  for key in trait_stock:
+    count = 0
+    idx = 0
+    for input_letter in trait:
+      try:
+        if input_letter == key[idx]:
+          count += 1
+      except: #occurs when trait in stock has shorter length than trait user inputted
+        continue
+      idx += 1
+
+    if count > match_letter_count:
+      closest_match = key
+      match_letter_count = count
+  return closest_match
 
 #formats snake traits pulled from json file, used in 'get_shop_stock' function
 def convert_snake_traits_to_list(snake_traits_data):
@@ -182,19 +202,7 @@ def welcome_message():
   print("""
 *******************************************************************************
 *****************  Welcome to the Ball Python Recommender!  *******************
-*******************************************************************************
-The purpose of this program is to aid BP breeders in putting together the best
-groups for customers based on their budget, desired traits, and number of
-snakes in a time efficent manner.  This program by default is using an example
-inventory file from the Crescent Serpents MorphMarket shop (it is not current).
-
-
-To use your own shop file:
--Log into MorphMarket and right click the screen. Select 'view page source'.
--Locate the downloadable json file for your shop (ctrl + f and type json).
--Download the file into the 'Ball Python Recommender' folder as 'animals.json'
--Give it a test!
-  """)
+******************************************************************************* """)
   see_traits = input("Would you like to see a list of traits currently in stock? (Y/[any key]) ")
   if len(see_traits) > 0 and see_traits.upper()[0] == "Y":
     categorized_in_stock_traits()
@@ -210,7 +218,19 @@ def add_traits_to_order(user_input, order_trait_requirement, order_trait_list):
     elif trait.lower() in order_trait_list:
       print(f"{trait} is already in the order.")
     else:
-      print(f"Sorry, {trait} is not in stock.")
+      spelling_checked = spell_check(trait)
+      if spelling_checked != None:
+        did_you_mean = input(f"Sorry, {trait} is not in stock. Did you mean {spelling_checked}? (Y/N)")
+        if did_you_mean.lower() == "y":
+          trait = spelling_checked
+          if trait.lower() in trait_stock and trait not in order_trait_list:
+            order_trait_list.append(trait)
+          elif trait.lower() in order_trait_list:
+            print(f"{trait} is already in the order.")
+          else:
+            print(f"Sorry, {trait} is not in stock.")
+
+
   more_traits = input("Did you want to add any others (Y/[any key])? ")
   if more_traits.upper() != 'Y':
     group_order[order_trait_requirement] = order_trait_list
